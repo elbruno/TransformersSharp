@@ -1,8 +1,8 @@
 ﻿@page "/objectdetection"
 @using static TransformersSharp.Pipelines.ObjectDetectionPipeline
-@attribute [StreamRendering(true)]
-@attribute [OutputCache(Duration = 5)]
 
+@attribute [StreamRendering(true)]
+@rendermode InteractiveServer
 @inject DemoApiClient DetectionApi
 
 <PageTitle>Object Detection</PageTitle>
@@ -23,31 +23,55 @@
 
 <h1>Object Detection Demo</h1>
 
-@if (detectedObjects == null)
+<div>
+    <input @bind="imageUrl" placeholder="Enter image URL" style="width: 400px;" />
+    <button @onclick="DetectFromUrl" disabled="@isLoading">Detect</button>
+    <button @onclick="() => SetUrl(urlAnthonyDog)" disabled="@isLoading">Use Anthony Dog</button>
+    <button @onclick="() => SetUrl(urlBrunoDog)" disabled="@isLoading">Use Bruno Dog</button>
+</div>
+
+@if (isLoading)
 {
     <p><em>Loading...</em></p>
 }
-else
-{            
+else if (detectedObjects != null)
+{
     <div class="container">
-        <img src="@detectedObjects.Url" alt="Image of birds">
-        @foreach (var o in detectedObjects.DetectionResults)
+        <img src="@detectedObjects.Url" alt="Image for detection">
+        @if (detectedObjects.DetectionResults != null)
         {
-            var h = o.Box.YMax - o.Box.YMin;
-            var w = o.Box.XMax - o.Box.XMin;
-           <div class="detection" style="left: @(o.Box.XMin)px; top: @(o.Box.YMin)px; height: @(h)px; width: @(w)px ;">@o.Label</div>
+            @foreach (var o in detectedObjects.DetectionResults)
+            {
+                <div class="detection" style="left: @(o.Box.XMin)px; top: @(o.Box.YMin)px; height: @(o.Box.YMax - o.Box.YMin)px; width: @(o.Box.XMax - o.Box.XMin)px ;">@o.Label</div>
+            }
         }
     </div>
 }
 
 @code {
     private DetectResponse? detectedObjects;
-    // private const string url = "https://raw.githubusercontent.com/tonybaloney/TransformersSharp/refs/heads/asr/Demo/assets/dog.jpg";
-
-    private const string url = "https://raw.githubusercontent.com/microsoft/Generative-AI-for-beginners-dotnet/main/03-CoreGenerativeAITechniques/src/images/AceStick.jpg";
+    private const string urlAnthonyDog = "https://raw.githubusercontent.com/tonybaloney/TransformersSharp/refs/heads/asr/Demo/assets/dog.jpg";
+    private const string urlBrunoDog = "https://raw.githubusercontent.com/microsoft/Generative-AI-for-beginners-dotnet/main/03-CoreGenerativeAITechniques/src/images/AceStick.jpg";
+    private string imageUrl = urlAnthonyDog;
+    private bool isLoading = false;
 
     protected override async Task OnInitializedAsync()
     {
-        detectedObjects = await DetectionApi.GetObjectDetectionAsync(url);
+        //await DetectFromUrl();
+    }
+
+    private async Task DetectFromUrl()
+    {
+        isLoading = true;
+        detectedObjects = null;
+        StateHasChanged();
+        detectedObjects = await DetectionApi.GetObjectDetectionAsync(imageUrl);
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void SetUrl(string url)
+    {
+        imageUrl = url;
     }
 }
