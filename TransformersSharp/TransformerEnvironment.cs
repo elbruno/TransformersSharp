@@ -1,6 +1,7 @@
 ﻿using CSnakes.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using TransformersSharp.Pipelines;
 
 namespace TransformersSharp
@@ -17,12 +18,17 @@ namespace TransformersSharp
                 IHostBuilder builder = Host.CreateDefaultBuilder()
                     .ConfigureServices(services =>
                     {
+                        // Configure detailed logging
+
+                        services.AddLogging(loggingBuilder =>
+                        {
+                            loggingBuilder.AddConsole();
+                            loggingBuilder.AddDebug();
+                            loggingBuilder.SetMinimumLevel(LogLevel.Debug);
+                        });
+
                         // Use Local AppData folder for Python installation
                         string appDataPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransformersSharp");
-
-                        // Create the directory if it doesn't exist
-                        if (!Directory.Exists(appDataPath))
-                            Directory.CreateDirectory(appDataPath);
 
                         // If user has an environment variable TRANSFORMERS_SHARP_VENV_PATH, use that instead
                         string? envPath = Environment.GetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH");
@@ -32,8 +38,12 @@ namespace TransformersSharp
                         else
                             venvPath = Path.Join(appDataPath, "venv");
 
-                        // Save the TRANSFORMERS_SHARP_VENV_PATH for the current process
-                        Environment.SetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH", venvPath, EnvironmentVariableTarget.Process);
+                        // Create the directory if it doesn't exist
+                        if (!Directory.Exists(appDataPath))
+                            Directory.CreateDirectory(appDataPath);
+
+                        // Save the TRANSFORMERS_SHARP_VENV_PATH for the current user
+                        Environment.SetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH", venvPath, EnvironmentVariableTarget.User);
 
                         // Write requirements to appDataPath
                         string requirementsPath = Path.Join(appDataPath, "requirements.txt");
@@ -61,10 +71,6 @@ namespace TransformersSharp
                     });
 
                 var app = builder.Build();
-
-                // once the environment is created, save the TRANSFORMERS_SHARP_VENV_PATH
-
-
                 _env = app.Services.GetRequiredService<IPythonEnvironment>();
             }
         }
