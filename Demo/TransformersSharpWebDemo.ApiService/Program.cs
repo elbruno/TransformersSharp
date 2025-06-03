@@ -13,6 +13,14 @@ builder.Services.AddProblemDetails();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Configure detailed logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
+// add detailed logging
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -23,13 +31,25 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ApiService");
+
 var objectDetectionPipeline = ObjectDetectionPipeline.FromModel("facebook/detr-resnet-50");
 var speechToTextClient = SpeechToTextClient.FromModel("openai/whisper-small");
 
 app.MapPost("/detect", (DetectRequest r) =>
 {
-    var result = objectDetectionPipeline.Detect(r.Url);
-    return result;
+    logger.LogInformation("/detect called with Url: {Url}", r.Url);
+    try
+    {
+        var result = objectDetectionPipeline.Detect(r.Url);
+        logger.LogDebug("Detection result: {@Result}", result);
+        return result;
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error in /detect endpoint for Url: {Url}", r.Url);
+        throw;
+    }
 
 }).Accepts<DetectRequest>("application/json")
     .Produces<DetectionResult>(StatusCodes.Status200OK)
@@ -37,28 +57,39 @@ app.MapPost("/detect", (DetectRequest r) =>
 
 app.MapPost("/transcribe", async (HttpRequest request) =>
 {
+    logger.LogInformation("/transcribe called");
     if (!request.HasFormContentType)
+    {
+        logger.LogWarning("/transcribe called without form content type");
         return Results.BadRequest("File upload required");
+    }
 
     var form = await request.ReadFormAsync();
 
     string output = string.Empty;
     foreach (var file in form.Files)
     {
+        logger.LogInformation("Processing file: {FileName}, Size: {Length}", file.FileName, file.Length);
         using var stream = file.OpenReadStream();
-        output += await speechToTextClient.GetTextAsync(stream);
+        try
+        {
+            var text = await speechToTextClient.GetTextAsync(stream);
+            output += text + "\n";
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error processing file: {FileName}", file.FileName);
+            return Results.BadRequest($"Error processing file: {file.FileName}");
+        }
     }
 
     return Results.Ok(output);
-
-}).Accepts<IFormFile>("multipart/form-data")
-    .Produces<string>(StatusCodes.Status200OK)
-    .WithName("Transcribe");
+});
 
 app.MapDefaultEndpoints();
 
 app.Run();
 
-record DetectRequest(string Url)
+public record DetectRequest(string Url)
 {
 }

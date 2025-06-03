@@ -1,6 +1,7 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var apiService = builder.AddProject<Projects.TransformersSharpWebDemo_ApiService>("apiservice");
+var apiService = builder.AddProject<Projects.TransformersSharpWebDemo_ApiService>("apiservice")
+    .WithExternalHttpEndpoints();
 
 builder.AddProject<Projects.TransformersSharpWebDemo_Web>("webfrontend")
     .WithExternalHttpEndpoints()

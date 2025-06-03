@@ -32,6 +32,9 @@ namespace TransformersSharp
                         else
                             venvPath = Path.Join(appDataPath, "venv");
 
+                        // Save the TRANSFORMERS_SHARP_VENV_PATH for the current process
+                        Environment.SetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH", venvPath, EnvironmentVariableTarget.Process);
+
                         // Write requirements to appDataPath
                         string requirementsPath = Path.Join(appDataPath, "requirements.txt");
 
@@ -54,9 +57,13 @@ namespace TransformersSharp
                                 .WithVirtualEnvironment(venvPath)
                                 .WithUvInstaller()
                                 .FromRedistributable(); // Download Python 3.12 and store it locally
+
                     });
 
                 var app = builder.Build();
+
+                // once the environment is created, save the TRANSFORMERS_SHARP_VENV_PATH
+
 
                 _env = app.Services.GetRequiredService<IPythonEnvironment>();
             }
