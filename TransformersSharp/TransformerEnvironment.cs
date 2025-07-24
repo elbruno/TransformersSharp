@@ -52,11 +52,12 @@ namespace TransformersSharp
                         string[] requirements =
                         {
                             "transformers",
-                            "sentence_transformers",
+                            "sentence_transformers", 
                             "torch",
                             "pillow",
                             "timm",
-                            "einops"
+                            "einops",
+                            "diffusers"
                         };
 
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));
