@@ -12,8 +12,7 @@ public class ImageGenerator : IDisposable
     public ImageGenerator(string model = "kandinsky-community/kandinsky-2-2-decoder", string device = "cpu")
     {
         _pipeline = TextToImagePipeline.FromModel(
-            model: model, 
-            torchDtype: TorchDtype.BFloat16,
+            model: model,
             device: device);
     }
 
