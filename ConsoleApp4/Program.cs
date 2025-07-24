@@ -30,13 +30,14 @@ foreach (var prompt in samplePrompts)
     {
         var result = cpuGen.GenerateImage(prompt);
         cpuResults.Add(result);
-        Console.WriteLine($"✅ CPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
+        Console.WriteLine($" >> ✅ CPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ CPU test failed: {ex.Message}");
+        Console.WriteLine($">> ❌ CPU test failed: {ex.Message}");
     }
     Console.WriteLine(" >> image generation complete");
+    Console.WriteLine(" >> ");
     Console.WriteLine();
 }
 Console.WriteLine("----------------------");
@@ -44,18 +45,22 @@ Console.WriteLine("--- GPU (CUDA) Generation ---");
 
 foreach (var prompt in samplePrompts)
 {
-    Console.WriteLine($"Prompt: {prompt}");
+    Console.WriteLine(" >> start image generation ...");
+    Console.WriteLine($" >> Prompt: {prompt}");
     using var gpuGen = new ImageGenerator(device: "cuda");
     try
     {
         var result = gpuGen.GenerateImage(prompt);
         gpuResults.Add(result);
-        Console.WriteLine($"✅ GPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
+        Console.WriteLine($" >> ✅ GPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"❌ GPU test failed: {ex.Message}");
+        Console.WriteLine($" >> ❌ GPU test failed: {ex.Message}");
     }
+    Console.WriteLine(" >> image generation complete");
+    Console.WriteLine(" >> ");
+    Console.WriteLine();
 }
 Console.WriteLine("----------------------");
 
