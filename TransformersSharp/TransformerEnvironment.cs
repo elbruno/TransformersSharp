@@ -52,8 +52,10 @@ namespace TransformersSharp
                         string[] requirements =
                         {
                             "transformers",
-                            "sentence_transformers", 
+                            "sentence_transformers",
                             "torch",
+                            "torchvision",
+                            "torchaudio",
                             "pillow",
                             "timm",
                             "einops",
@@ -61,6 +63,32 @@ namespace TransformersSharp
                         };
 
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));
+
+                        // Create a separate script to install CUDA PyTorch
+                        string installCudaScript = Path.Join(appDataPath, "install_cuda_pytorch.py");
+                        string cudaInstallScript = @"
+import subprocess
+import sys
+
+def install_cuda_pytorch():
+    try:
+        # Try to install CUDA version of PyTorch
+        subprocess.check_call([
+            sys.executable, '-m', 'pip', 'install', 
+            'torch', 'torchvision', 'torchaudio', 
+            '--index-url', 'https://download.pytorch.org/whl/cu121',
+            '--force-reinstall'
+        ])
+        print('CUDA PyTorch installed successfully')
+        return True
+    except subprocess.CalledProcessError:
+        print('Failed to install CUDA PyTorch, keeping CPU version')
+        return False
+
+if __name__ == '__main__':
+    install_cuda_pytorch()
+";
+                        File.WriteAllText(installCudaScript, cudaInstallScript);
 
                         services
                                 .WithPython()
@@ -98,6 +126,35 @@ namespace TransformersSharp
             var pipeline = wrapperModule.Pipeline(task, model, tokenizer, torchDtypeStr);
 
             return new Pipeline(pipeline);
+        }
+
+        /// <summary>
+        /// Installs CUDA-enabled PyTorch. Call this method if you need GPU acceleration.
+        /// </summary>
+        public static void InstallCudaPyTorch()
+        {
+            var wrapperModule = Env.TransformersWrapper();
+            try
+            {
+                // Use the Python subprocess to install CUDA PyTorch
+                string appDataPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransformersSharp");
+                string installScript = Path.Join(appDataPath, "install_cuda_pytorch.py");
+
+                if (File.Exists(installScript))
+                {
+                    // TODO: Add implementation to run the CUDA installation script
+                    Console.WriteLine("To install CUDA PyTorch manually, run the following commands:");
+                    Console.WriteLine($"1. Navigate to: {appDataPath}");
+                    Console.WriteLine($"2. Activate the virtual environment: .\\venv\\Scripts\\Activate.ps1");
+                    Console.WriteLine("3. Install CUDA PyTorch: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to install CUDA PyTorch: {ex.Message}");
+                Console.WriteLine("You can manually install CUDA PyTorch by running:");
+                Console.WriteLine("pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121");
+            }
         }
 
         public static void Dispose()

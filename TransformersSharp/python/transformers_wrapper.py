@@ -6,6 +6,40 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from collections.abc import Buffer
 from PIL import Image
 
+def is_cuda_available() -> bool:
+    """
+    Check if CUDA is available for PyTorch.
+    """
+    return torch.cuda.is_available()
+
+def get_device_info() -> dict[str, Any]:
+    """
+    Get information about available devices.
+    """
+    return {
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
+        "current_device": torch.cuda.current_device() if torch.cuda.is_available() else None,
+        "device_name": torch.cuda.get_device_name() if torch.cuda.is_available() else None
+    }
+
+def validate_and_get_device(requested_device: Optional[str] = None) -> str:
+    """
+    Validate the requested device and return the best available device.
+    If CUDA is requested but not available, fall back to CPU with a warning.
+    """
+    if requested_device is None:
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    
+    if requested_device.lower() == "cuda":
+        if torch.cuda.is_available():
+            return "cuda"
+        else:
+            print("Warning: CUDA requested but not available. PyTorch was not compiled with CUDA support. Falling back to CPU.")
+            return "cpu"
+    
+    return requested_device
+
 def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer: Optional[str] = None, torch_dtype: Optional[str] = None, device: Optional[str] = None, trust_remote_code: bool = False):
     """
     Create a pipeline for a specific task using the Hugging Face Transformers library.
@@ -16,6 +50,9 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
         else:
             torch_dtype = getattr(torch, torch_dtype.lower())
     
+    # Validate and get the best available device
+    device = validate_and_get_device(device)
+    
     # Handle text-to-image using diffusers
     if task == "text-to-image":
         from diffusers import AutoPipelineForText2Image
@@ -23,7 +60,7 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
             model, 
             torch_dtype=torch_dtype, 
             trust_remote_code=trust_remote_code
-        ).to(device if device else "cpu")
+        ).to(device)
     
     return TransformersPipeline(task=task, model=model, tokenizer=tokenizer, torch_dtype=torch_dtype, device=device, trust_remote_code=trust_remote_code)
 
