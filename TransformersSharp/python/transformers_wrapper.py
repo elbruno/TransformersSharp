@@ -15,6 +15,16 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
             raise ValueError(f"Unsupported torch_dtype: {torch_dtype}")
         else:
             torch_dtype = getattr(torch, torch_dtype.lower())
+    
+    # Handle text-to-image using diffusers
+    if task == "text-to-image":
+        from diffusers import AutoPipelineForText2Image
+        return AutoPipelineForText2Image.from_pretrained(
+            model, 
+            torch_dtype=torch_dtype, 
+            trust_remote_code=trust_remote_code
+        ).to(device if device else "cpu")
+    
     return TransformersPipeline(task=task, model=model, tokenizer=tokenizer, torch_dtype=torch_dtype, device=device, trust_remote_code=trust_remote_code)
 
 
@@ -180,3 +190,79 @@ def invoke_automatic_speech_recognition_pipeline_from_bytes(pipeline: Pipeline, 
     """
     r = pipeline(audio, return_timestamps=False)
     return r['text']
+
+
+def invoke_text_to_image_pipeline(pipeline, 
+                                text: str,
+                                num_inference_steps: Optional[int] = 50,
+                                guidance_scale: Optional[float] = 7.5,
+                                height: Optional[int] = 512,
+                                width: Optional[int] = 512) -> Buffer:
+    """
+    Invoke a text-to-image pipeline.
+    
+    Args:
+        pipeline: The text-to-image pipeline object (could be diffusers or transformers)
+        text: The text prompt for image generation
+        num_inference_steps: Number of inference steps
+        guidance_scale: Guidance scale for generation
+        height: Height of generated image
+        width: Width of generated image
+    Returns:
+        The generated image as bytes
+    """
+    # For diffusers pipelines
+    if hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
+        # This is a diffusers pipeline
+        result = pipeline(
+            text, 
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            height=height,
+            width=width
+        )
+        # Diffusers returns a result with .images attribute
+        image = result.images[0]
+    else:
+        # This is a transformers pipeline
+        result = pipeline(text, 
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    height=height,
+                    width=width)
+        
+        # Get the generated image (it should be a PIL Image)
+        if hasattr(result, 'images') and len(result.images) > 0:
+            image = result.images[0]
+        else:
+            image = result
+    
+    # Convert PIL Image to bytes
+    from io import BytesIO
+    import numpy as np
+    
+    # Convert PIL Image to numpy array and then to bytes
+    if hasattr(image, 'save'):
+        # It's a PIL Image
+        buffer = BytesIO()
+        image.save(buffer, format='PNG')
+        return buffer.getvalue()
+    else:
+        # It might already be a numpy array or tensor
+        if hasattr(image, 'numpy'):
+            image = image.numpy()
+        
+        # Convert to uint8 if needed
+        if image.dtype != np.uint8:
+            image = (image * 255).astype(np.uint8)
+            
+        # Convert numpy array to PIL Image and then to bytes
+        from PIL import Image as PILImage
+        if len(image.shape) == 3 and image.shape[2] == 3:  # RGB
+            pil_image = PILImage.fromarray(image, mode='RGB')
+        else:
+            pil_image = PILImage.fromarray(image)
+            
+        buffer = BytesIO()
+        pil_image.save(buffer, format='PNG')
+        return buffer.getvalue()
