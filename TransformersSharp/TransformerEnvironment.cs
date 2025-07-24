@@ -59,7 +59,8 @@ namespace TransformersSharp
                             "pillow",
                             "timm",
                             "einops",
-                            "diffusers"
+                            "diffusers",
+                            "accelerate"
                         };
 
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));

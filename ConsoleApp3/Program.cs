@@ -4,7 +4,7 @@ try
 {
     var pipeline = TextToImagePipeline.FromModel(
         "kandinsky-community/kandinsky-2-2-decoder",
-        trustRemoteCode: true, device: "cuda");
+        device: "cuda");
 
     var result = pipeline.Generate(
         "A pixelated image of a beaver in Canada",

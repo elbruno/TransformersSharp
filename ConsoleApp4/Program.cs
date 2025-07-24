@@ -16,7 +16,7 @@ var samplePrompts = new[]
     "A futuristic city skyline at sunset.",
     "A cat riding a skateboard in a park.",
     "A surreal landscape with floating islands.",
-    "A robot painting a portrait in an art studio."
+    "A robot painting a portrait in a spaceship."
 };
 
 var cpuResults = new List<ImageGenerationResult>();
@@ -25,12 +25,15 @@ var gpuResults = new List<ImageGenerationResult>();
 Console.WriteLine("=== TransformersSharp Image Generation Performance Test ===\n");
 Console.WriteLine("Image size: 256x256 pixels\n");
 
+Console.WriteLine("----------------------");
 Console.WriteLine("--- CPU Generation ---");
 foreach (var prompt in samplePrompts)
 {
-    Console.WriteLine($"Prompt: {prompt}");
+    Console.WriteLine(" >> start image generation ...");
+    Console.WriteLine($" >> Prompt: {prompt}");
     try
     {
+
         var result = ImageGenerator.GenerateImage("cpu", prompt);
         cpuResults.Add(result);
         Console.WriteLine($"✅ CPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
@@ -39,9 +42,11 @@ foreach (var prompt in samplePrompts)
     {
         Console.WriteLine($"❌ CPU test failed: {ex.Message}");
     }
+    Console.WriteLine(" >> image generation complete");
+    Console.WriteLine();
 }
-
-Console.WriteLine("\n--- GPU (CUDA) Generation ---");
+Console.WriteLine("----------------------");
+Console.WriteLine("--- GPU (CUDA) Generation ---");
 foreach (var prompt in samplePrompts)
 {
     Console.WriteLine($"Prompt: {prompt}");
@@ -56,8 +61,10 @@ foreach (var prompt in samplePrompts)
         Console.WriteLine($"❌ GPU test failed: {ex.Message}");
     }
 }
+Console.WriteLine("----------------------");
 
-Console.WriteLine("\n=== Performance Comparison ===");
+Console.WriteLine("==============================");
+Console.WriteLine("=== Performance Comparison ===");
 for (int i = 0; i < samplePrompts.Length; i++)
 {
     var cpuTime = cpuResults.Count > i ? cpuResults[i].TimeTakenSeconds : double.NaN;
@@ -76,5 +83,5 @@ for (int i = 0; i < samplePrompts.Length; i++)
         Console.WriteLine("  (One or both tests failed)\n");
     }
 }
-
+Console.WriteLine("==============================");
 Console.WriteLine("=== Test Complete ===");
