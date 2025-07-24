@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using TransformersSharp;
 using TransformersSharp.Pipelines;
 
 namespace ConsoleApp4;
@@ -11,7 +12,8 @@ public class ImageGenerator : IDisposable
     public ImageGenerator(string model = "kandinsky-community/kandinsky-2-2-decoder", string device = "cpu")
     {
         _pipeline = TextToImagePipeline.FromModel(
-            model,
+            model: model, 
+            torchDtype: TorchDtype.BFloat16,
             device: device);
     }
 

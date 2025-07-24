@@ -56,12 +56,13 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
     # Handle text-to-image using diffusers
     if task == "text-to-image":
         from diffusers import AutoPipelineForText2Image
+        # Remove trust_remote_code for diffusers pipelines to avoid warning
         return AutoPipelineForText2Image.from_pretrained(
             model, 
-            torch_dtype=torch_dtype, 
-            trust_remote_code=trust_remote_code
+            torch_dtype=torch_dtype
         ).to(device)
     
+    # Only pass trust_remote_code for transformers pipelines
     return TransformersPipeline(task=task, model=model, tokenizer=tokenizer, torch_dtype=torch_dtype, device=device, trust_remote_code=trust_remote_code)
 
 
@@ -251,12 +252,14 @@ def invoke_text_to_image_pipeline(pipeline,
     # For diffusers pipelines
     if hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
         # This is a diffusers pipeline
+        # Remove deprecated callback_steps, use callback_on_step_end if needed
         result = pipeline(
             text, 
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             height=height,
             width=width
+            # callback_on_step_end can be added here if needed
         )
         # Diffusers returns a result with .images attribute
         image = result.images[0]
