@@ -66,6 +66,8 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
     return TransformersPipeline(task=task, model=model, tokenizer=tokenizer, torch_dtype=torch_dtype, device=device, trust_remote_code=trust_remote_code)
 
 
+
+
 def invoke_text_generation_pipeline_with_template(pipeline: TextGenerationPipeline, 
                              messages: list[dict[str, str]],
                              max_length: Optional[int] = None,
@@ -252,15 +254,17 @@ def invoke_text_to_image_pipeline(pipeline,
     # For diffusers pipelines
     if hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
         # This is a diffusers pipeline
-        # Remove deprecated callback_steps, use callback_on_step_end if needed
-        result = pipeline(
-            text, 
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            height=height,
-            width=width
-            # callback_on_step_end can be added here if needed
-        )
+        # Suppress FutureWarning about callback_steps deprecation
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning, message=".*callback_steps.*")
+            result = pipeline(
+                text, 
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                height=height,
+                width=width
+            )
         # Diffusers returns a result with .images attribute
         image = result.images[0]
     else:

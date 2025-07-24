@@ -18,12 +18,12 @@ public class TextToImagePipeline : Pipeline
         /// The generated image as a byte array in PNG format.
         /// </summary>
         public byte[] ImageBytes { get; set; }
-        
+
         /// <summary>
         /// The width of the generated image in pixels.
         /// </summary>
         public int Width { get; set; }
-        
+
         /// <summary>
         /// The height of the generated image in pixels.
         /// </summary>
@@ -65,11 +65,11 @@ public class TextToImagePipeline : Pipeline
     public ImageGenerationResult Generate(string prompt, int numInferenceSteps = 50, float guidanceScale = 7.5f, int height = 512, int width = 512)
     {
         var imageBuffer = TransformerEnvironment.TransformersWrapper.InvokeTextToImagePipeline(
-            PipelineObject, 
-            prompt, 
-            numInferenceSteps, 
-            guidanceScale, 
-            height, 
+            PipelineObject,
+            prompt,
+            numInferenceSteps,
+            guidanceScale,
+            height,
             width);
 
         return new ImageGenerationResult
