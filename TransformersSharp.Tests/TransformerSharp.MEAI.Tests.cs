@@ -1,4 +1,5 @@
 ﻿using TransformersSharp.MEAI;
+using TransformersSharp.Pipelines;
 using Microsoft.Extensions.AI;
 
 namespace TransformersSharp.Tests;
@@ -61,5 +62,25 @@ public class TransformerSharpMEAITests
             Assert.NotEmpty(update.Text);
             Assert.Contains("stew for dinner", update.Text, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    [Fact]
+    public void TestTextToImagePipeline()
+    {
+        var textToImagePipeline = TextToImagePipeline.FromModel("kandinsky-community/kandinsky-2-2-decoder", trustRemoteCode: true);
+        var result = textToImagePipeline.Generate("A beautiful sunset over mountains", numInferenceSteps: 20, height: 256, width: 256);
+        
+        Assert.NotNull(result.ImageBytes);
+        Assert.True(result.ImageBytes.Length > 0);
+        Assert.Equal(256, result.Width);
+        Assert.Equal(256, result.Height);
+        
+        // Verify it's a valid image by checking for PNG header
+        Assert.True(result.ImageBytes.Length >= 8);
+        // PNG header: 89 50 4E 47 0D 0A 1A 0A
+        Assert.Equal(0x89, result.ImageBytes[0]);
+        Assert.Equal(0x50, result.ImageBytes[1]);
+        Assert.Equal(0x4E, result.ImageBytes[2]);
+        Assert.Equal(0x47, result.ImageBytes[3]);
     }
 }

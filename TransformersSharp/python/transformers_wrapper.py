@@ -180,3 +180,65 @@ def invoke_automatic_speech_recognition_pipeline_from_bytes(pipeline: Pipeline, 
     """
     r = pipeline(audio, return_timestamps=False)
     return r['text']
+
+
+def invoke_text_to_image_pipeline(pipeline: Pipeline, 
+                                text: str,
+                                num_inference_steps: Optional[int] = 50,
+                                guidance_scale: Optional[float] = 7.5,
+                                height: Optional[int] = 512,
+                                width: Optional[int] = 512) -> Buffer:
+    """
+    Invoke a text-to-image pipeline.
+    
+    Args:
+        pipeline: The text-to-image pipeline object
+        text: The text prompt for image generation
+        num_inference_steps: Number of inference steps
+        guidance_scale: Guidance scale for generation
+        height: Height of generated image
+        width: Width of generated image
+    Returns:
+        The generated image as bytes
+    """
+    r = pipeline(text, 
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                height=height,
+                width=width)
+    
+    # Convert PIL Image to bytes
+    from io import BytesIO
+    import numpy as np
+    
+    # Get the generated image (it should be a PIL Image)
+    if hasattr(r, 'images') and len(r.images) > 0:
+        image = r.images[0]
+    else:
+        image = r
+        
+    # Convert PIL Image to numpy array and then to bytes
+    if hasattr(image, 'save'):
+        # It's a PIL Image
+        buffer = BytesIO()
+        image.save(buffer, format='PNG')
+        return buffer.getvalue()
+    else:
+        # It might already be a numpy array or tensor
+        if hasattr(image, 'numpy'):
+            image = image.numpy()
+        
+        # Convert to uint8 if needed
+        if image.dtype != np.uint8:
+            image = (image * 255).astype(np.uint8)
+            
+        # Convert numpy array to PIL Image and then to bytes
+        from PIL import Image as PILImage
+        if len(image.shape) == 3 and image.shape[2] == 3:  # RGB
+            pil_image = PILImage.fromarray(image, mode='RGB')
+        else:
+            pil_image = PILImage.fromarray(image)
+            
+        buffer = BytesIO()
+        pil_image.save(buffer, format='PNG')
+        return buffer.getvalue()
