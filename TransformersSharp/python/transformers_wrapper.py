@@ -23,6 +23,75 @@ def get_device_info() -> dict[str, Any]:
         "device_name": torch.cuda.get_device_name() if torch.cuda.is_available() else None
     }
 
+def get_detailed_system_info() -> dict[str, Any]:
+    """
+    Get detailed information about CPU and GPU for performance analysis.
+    """
+    import platform
+    import psutil
+    import os
+    
+    info = {
+        # CPU Information
+        "cpu": {
+            "processor": platform.processor(),
+            "architecture": platform.architecture()[0],
+            "logical_cores": psutil.cpu_count(logical=True),
+            "physical_cores": psutil.cpu_count(logical=False),
+            "cpu_freq_current": round(psutil.cpu_freq().current, 2) if psutil.cpu_freq() else None,
+            "cpu_freq_max": round(psutil.cpu_freq().max, 2) if psutil.cpu_freq() else None,
+        },
+        # Memory Information
+        "memory": {
+            "total_gb": round(psutil.virtual_memory().total / (1024**3), 2),
+            "available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
+            "used_percent": psutil.virtual_memory().percent
+        },
+        # PyTorch Information
+        "pytorch": {
+            "version": torch.__version__,
+            "cuda_available": torch.cuda.is_available(),
+            "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
+            "cudnn_version": torch.backends.cudnn.version() if torch.cuda.is_available() and torch.backends.cudnn.is_available() else None
+        }
+    }
+    
+    # GPU Information
+    if torch.cuda.is_available():
+        gpu_info = {
+            "device_count": torch.cuda.device_count(),
+            "current_device": torch.cuda.current_device(),
+            "devices": []
+        }
+        
+        for i in range(torch.cuda.device_count()):
+            device_props = torch.cuda.get_device_properties(i)
+            memory_info = {
+                "total_memory_gb": round(device_props.total_memory / (1024**3), 2),
+                "allocated_memory_gb": round(torch.cuda.memory_allocated(i) / (1024**3), 2),
+                "cached_memory_gb": round(torch.cuda.memory_reserved(i) / (1024**3), 2)
+            }
+            
+            gpu_info["devices"].append({
+                "index": i,
+                "name": device_props.name,
+                "compute_capability": f"{device_props.major}.{device_props.minor}",
+                "total_memory_gb": memory_info["total_memory_gb"],
+                "multiprocessor_count": device_props.multi_processor_count,
+                "allocated_memory_gb": memory_info["allocated_memory_gb"],
+                "cached_memory_gb": memory_info["cached_memory_gb"]
+            })
+        
+        info["gpu"] = gpu_info
+    else:
+        info["gpu"] = {
+            "device_count": 0,
+            "available": False,
+            "message": "CUDA not available"
+        }
+    
+    return info
+
 def validate_and_get_device(requested_device: Optional[str] = None, silent: bool = False) -> str:
     """
     Validate the requested device and return the best available device.

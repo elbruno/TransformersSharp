@@ -60,7 +60,8 @@ namespace TransformersSharp
                             "timm",
                             "einops",
                             "diffusers",
-                            "accelerate"
+                            "accelerate",
+                            "psutil"
                         };
 
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));
@@ -213,6 +214,53 @@ if __name__ == '__main__':
                 {
                     {"error", ex.Message},
                     {"cuda_available", false}
+                };
+            }
+        }
+
+        /// <summary>
+        /// Gets detailed system information including CPU, memory, and GPU details for performance analysis.
+        /// </summary>
+        /// <returns>A dictionary containing comprehensive system information</returns>
+        public static Dictionary<string, object> GetDetailedSystemInfo()
+        {
+            try
+            {
+                // For now, let's create a simplified version that doesn't rely on complex Python object conversion
+                // We can enhance this later once we understand the conversion patterns better
+                var systemInfo = new Dictionary<string, object>();
+                
+                // Add basic system info that we can gather from .NET
+                systemInfo["system"] = new Dictionary<string, object>
+                {
+                    {"platform", Environment.OSVersion.ToString()},
+                    {"architecture", Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit"},
+                    {"processor_count", Environment.ProcessorCount},
+                    {"dotnet_version", Environment.Version.ToString()}
+                };
+                
+                // Add CUDA info
+                bool cudaAvailable = IsCudaAvailable();
+                systemInfo["cuda"] = new Dictionary<string, object>
+                {
+                    {"available", cudaAvailable},
+                    {"description", cudaAvailable ? "CUDA is available for GPU acceleration" : "CUDA not available - using CPU only"}
+                };
+                
+                // Add basic memory info
+                systemInfo["memory"] = new Dictionary<string, object>
+                {
+                    {"working_set_mb", Math.Round(Environment.WorkingSet / (1024.0 * 1024.0), 2)}
+                };
+                
+                return systemInfo;
+            }
+            catch (Exception ex)
+            {
+                return new Dictionary<string, object>
+                {
+                    {"error", ex.Message},
+                    {"available", false}
                 };
             }
         }

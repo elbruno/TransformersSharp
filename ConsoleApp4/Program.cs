@@ -161,3 +161,72 @@ else
 
 Console.WriteLine("==============================");
 Console.WriteLine("=== Test Complete ===");
+
+// Display detailed system information used for the tests
+Console.WriteLine();
+Console.WriteLine("==============================");
+Console.WriteLine("=== System Information ===");
+try
+{
+    var systemInfo = TransformerEnvironment.GetDetailedSystemInfo();
+    
+    // Display System Information
+    if (systemInfo.ContainsKey("system") && systemInfo["system"] is Dictionary<string, object> sysInfo)
+    {
+        Console.WriteLine("--- System Information ---");
+        if (sysInfo.ContainsKey("platform")) Console.WriteLine($"Platform: {sysInfo["platform"]}");
+        if (sysInfo.ContainsKey("architecture")) Console.WriteLine($"Architecture: {sysInfo["architecture"]}");
+        if (sysInfo.ContainsKey("processor_count")) Console.WriteLine($"Processor Count: {sysInfo["processor_count"]}");
+        if (sysInfo.ContainsKey("dotnet_version")) Console.WriteLine($".NET Version: {sysInfo["dotnet_version"]}");
+        Console.WriteLine();
+    }
+    
+    // Display CUDA Information
+    if (systemInfo.ContainsKey("cuda") && systemInfo["cuda"] is Dictionary<string, object> cudaInfo)
+    {
+        Console.WriteLine("--- CUDA Information ---");
+        if (cudaInfo.ContainsKey("available")) 
+        {
+            bool available = Convert.ToBoolean(cudaInfo["available"]);
+            Console.WriteLine($"CUDA Available: {(available ? "✅ Yes" : "❌ No")}");
+        }
+        if (cudaInfo.ContainsKey("description")) Console.WriteLine($"Status: {cudaInfo["description"]}");
+        Console.WriteLine();
+    }
+    
+    // Display Memory Information
+    if (systemInfo.ContainsKey("memory") && systemInfo["memory"] is Dictionary<string, object> memInfo)
+    {
+        Console.WriteLine("--- Memory Information ---");
+        if (memInfo.ContainsKey("working_set_mb")) Console.WriteLine($"Working Set: {memInfo["working_set_mb"]} MB");
+        Console.WriteLine();
+    }
+    
+    // Display test execution summary
+    Console.WriteLine("--- Test Execution Summary ---");
+    Console.WriteLine($"CPU Tests Completed: {cpuResults.Count}/{samplePrompts.Length}");
+    Console.WriteLine($"GPU Tests Completed: {gpuResults.Count}/{samplePrompts.Length}");
+    if (cpuResults.Count > 0)
+    {
+        var avgCpuTime = cpuResults.Average(r => r.TimeTakenSeconds);
+        Console.WriteLine($"Average CPU Time per Image: {avgCpuTime:F2} seconds");
+    }
+    if (gpuResults.Count > 0)
+    {
+        var avgGpuTime = gpuResults.Average(r => r.TimeTakenSeconds);
+        Console.WriteLine($"Average GPU Time per Image: {avgGpuTime:F2} seconds");
+        
+        if (cpuResults.Count > 0)
+        {
+            var avgCpuTime = cpuResults.Average(r => r.TimeTakenSeconds);
+            var speedup = avgCpuTime / avgGpuTime;
+            Console.WriteLine($"GPU Speedup Factor: {speedup:F2}x");
+        }
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ Could not retrieve detailed system information: {ex.Message}");
+}
+
+Console.WriteLine("==============================");
