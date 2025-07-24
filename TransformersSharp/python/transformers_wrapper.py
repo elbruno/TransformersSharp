@@ -23,10 +23,14 @@ def get_device_info() -> dict[str, Any]:
         "device_name": torch.cuda.get_device_name() if torch.cuda.is_available() else None
     }
 
-def validate_and_get_device(requested_device: Optional[str] = None) -> str:
+def validate_and_get_device(requested_device: Optional[str] = None, silent: bool = False) -> str:
     """
     Validate the requested device and return the best available device.
     If CUDA is requested but not available, fall back to CPU with a warning.
+    
+    Args:
+        requested_device: The requested device ('cuda', 'cpu', etc.)
+        silent: If True, suppress warning messages for graceful fallback
     """
     if requested_device is None:
         return "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,12 +39,13 @@ def validate_and_get_device(requested_device: Optional[str] = None) -> str:
         if torch.cuda.is_available():
             return "cuda"
         else:
-            print("Warning: CUDA requested but not available. PyTorch was not compiled with CUDA support. Falling back to CPU.")
+            if not silent:
+                print("Warning: CUDA requested but not available. PyTorch was not compiled with CUDA support. Falling back to CPU.")
             return "cpu"
     
     return requested_device
 
-def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer: Optional[str] = None, torch_dtype: Optional[str] = None, device: Optional[str] = None, trust_remote_code: bool = False):
+def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer: Optional[str] = None, torch_dtype: Optional[str] = None, device: Optional[str] = None, trust_remote_code: bool = False, silent_device_fallback: bool = False):
     """
     Create a pipeline for a specific task using the Hugging Face Transformers library.
     """
@@ -51,7 +56,7 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
             torch_dtype = getattr(torch, torch_dtype.lower())
     
     # Validate and get the best available device
-    device = validate_and_get_device(device)
+    device = validate_and_get_device(device, silent=silent_device_fallback)
     
     # Handle text-to-image using diffusers
     if task == "text-to-image":

@@ -23,6 +23,18 @@ public class ImageGenerator : IDisposable
     {
         _model = model;
         _device = device;
+        
+        // Check CUDA availability and provide user feedback
+        if (device.ToLower() == "cuda" && !TransformerEnvironment.IsCudaAvailable())
+        {
+            Console.WriteLine($"⚠️  CUDA requested but not available. Using CPU instead.");
+            Console.WriteLine("   To enable GPU acceleration, ensure you have:");
+            Console.WriteLine("   - Compatible NVIDIA GPU");
+            Console.WriteLine("   - NVIDIA drivers installed");
+            Console.WriteLine("   - CUDA-enabled PyTorch (run TransformerEnvironment.InstallCudaPyTorch())");
+            Console.WriteLine();
+        }
+        
         CreatePipeline();
     }
 
@@ -43,10 +55,11 @@ public class ImageGenerator : IDisposable
         GC.Collect();
         GC.WaitForPendingFinalizers();
 
-        // Create new pipeline instance
+        // Create new pipeline instance with silent device fallback
         _pipeline = TextToImagePipeline.FromModel(
             model: _model,
-            device: _device);
+            device: _device,
+            silentDeviceFallback: true);
     }
 
     /// <summary>

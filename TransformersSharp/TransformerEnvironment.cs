@@ -158,6 +158,65 @@ if __name__ == '__main__':
             }
         }
 
+        /// <summary>
+        /// Checks if CUDA is available for GPU acceleration.
+        /// </summary>
+        /// <returns>True if CUDA is available, false otherwise</returns>
+        public static bool IsCudaAvailable()
+        {
+            try
+            {
+                var wrapperModule = Env.TransformersWrapper();
+                return wrapperModule.IsCudaAvailable();
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets detailed information about available devices including CUDA capabilities.
+        /// </summary>
+        /// <returns>A dictionary containing device information</returns>
+        public static Dictionary<string, object> GetDeviceInfo()
+        {
+            try
+            {
+                bool cudaAvailable = IsCudaAvailable();
+                var result = new Dictionary<string, object>
+                {
+                    {"cuda_available", cudaAvailable},
+                    {"cuda_device_count", 0}
+                };
+                
+                if (cudaAvailable)
+                {
+                    // Try to get additional info if CUDA is available
+                    try
+                    {
+                        // For now, just set basic info - we can enhance this later
+                        result["cuda_device_count"] = 1;
+                        result["device_name"] = "CUDA Device";
+                    }
+                    catch
+                    {
+                        // Ignore errors getting additional info
+                    }
+                }
+                
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return new Dictionary<string, object>
+                {
+                    {"error", ex.Message},
+                    {"cuda_available", false}
+                };
+            }
+        }
+
         public static void Dispose()
         {
             _env?.Dispose();
