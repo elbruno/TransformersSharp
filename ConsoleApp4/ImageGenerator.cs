@@ -19,7 +19,7 @@ public class ImageGenerator : IDisposable
     /// </summary>
     /// <param name="model">The model identifier (e.g., "kandinsky-community/kandinsky-2-2-decoder")</param>
     /// <param name="device">The device to run the model on (e.g., "cpu", "cuda")</param>
-    public ImageGenerator(string model = "kandinsky-community/kandinsky-2-2-decoder", string device = "cpu")
+    public ImageGenerator(string model = "stabilityai/stable-diffusion-2-1-base", string device = "cpu")
     {
         _model = model;
         _device = device;
