@@ -84,5 +84,25 @@ for (int i = 0; i < samplePrompts.Length; i++)
         Console.WriteLine("  (One or both tests failed)\n");
     }
 }
+
+// Calculate and display total runtime comparison
+var totalCpuTime = cpuResults.Sum(r => r.TimeTakenSeconds);
+var totalGpuTime = gpuResults.Sum(r => r.TimeTakenSeconds);
+var totalDiff = totalCpuTime - totalGpuTime;
+var overallFaster = totalDiff > 0 ? "GPU" : "CPU";
+
+Console.WriteLine("==============================");
+Console.WriteLine("=== Total Runtime Comparison ===");
+Console.WriteLine($"Total CPU Time: {totalCpuTime:F2} seconds");
+Console.WriteLine($"Total GPU Time: {totalGpuTime:F2} seconds");
+Console.WriteLine($"Total Difference: {Math.Abs(totalDiff):F2} seconds");
+Console.WriteLine($"Overall Winner: {overallFaster} was faster by {Math.Abs(totalDiff):F2} seconds");
+
+if (cpuResults.Count > 0 && gpuResults.Count > 0)
+{
+    var percentageDiff = (Math.Abs(totalDiff) / Math.Max(totalCpuTime, totalGpuTime)) * 100;
+    Console.WriteLine($"Performance Improvement: {percentageDiff:F1}%");
+}
+
 Console.WriteLine("==============================");
 Console.WriteLine("=== Test Complete ===");
