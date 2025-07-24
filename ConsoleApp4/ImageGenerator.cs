@@ -14,7 +14,6 @@ public static class ImageGenerator
         var stopwatch = Stopwatch.StartNew();
         var pipeline = TextToImagePipeline.FromModel(
             model,
-            trustRemoteCode: true,
             device: device);
 
         var result = pipeline.Generate(
