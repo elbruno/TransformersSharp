@@ -15,8 +15,7 @@ var samplePrompts = new[]
     "A pixelated image of a beaver in Canada.",
     "A futuristic city skyline at sunset.",
     "A cat riding a skateboard in a park.",
-    "A surreal landscape with floating islands.",
-    "A robot painting a portrait in a spaceship."
+    "A surreal landscape with floating islands."
 };
 
 var cpuResults = new List<ImageGenerationResult>();
