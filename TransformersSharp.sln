@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 18
-VisualStudioVersion = 18.0.10822.219
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36310.24 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransformersSharp", "TransformersSharp\TransformersSharp.csproj", "{03BF3AB6-6338-4DDC-8955-32D05557B7AB}"
 EndProject
@@ -12,6 +12,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp2", "ConsoleApp2\ConsoleApp2.csproj", "{39AEED3A-03FC-4A1C-B815-2906D232E6B6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp3", "ConsoleApp3\ConsoleApp3.csproj", "{7B7BE576-0204-40B5-BFB3-FDE90AFF846F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp4", "ConsoleApp4\ConsoleApp4.csproj", "{9D77017A-8D14-41A6-A910-8550D4C6F874}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{7B7BE576-0204-40B5-BFB3-FDE90AFF846F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7B7BE576-0204-40B5-BFB3-FDE90AFF846F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7B7BE576-0204-40B5-BFB3-FDE90AFF846F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
