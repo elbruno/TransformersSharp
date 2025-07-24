@@ -1,13 +1,5 @@
 ﻿
-using System.Diagnostics;
 using ConsoleApp4;
-using TransformersSharp.Pipelines;
-
-
-// ...existing code...
-
-Console.WriteLine("=== TransformersSharp CUDA Performance Test ===");
-Console.WriteLine();
 
 
 var samplePrompts = new[]
@@ -15,12 +7,15 @@ var samplePrompts = new[]
     "A pixelated image of a beaver in Canada.",
     "A futuristic city skyline at sunset.",
     "A cat riding a skateboard in a park.",
-    "A surreal landscape with floating islands."
+    "A surreal landscape with floating islands.",
+    "A robot playing soccer on the moon."
 };
 
 var cpuResults = new List<ImageGenerationResult>();
 var gpuResults = new List<ImageGenerationResult>();
 
+Console.WriteLine("=== TransformersSharp Performance Test ===");
+Console.WriteLine();
 Console.WriteLine("=== TransformersSharp Image Generation Performance Test ===\n");
 Console.WriteLine("Image size: 256x256 pixels\n");
 
@@ -30,10 +25,10 @@ foreach (var prompt in samplePrompts)
 {
     Console.WriteLine(" >> start image generation ...");
     Console.WriteLine($" >> Prompt: {prompt}");
+    using var cpuGen = new ImageGenerator(device: "cpu");
     try
     {
-
-        var result = ImageGenerator.GenerateImage("cpu", prompt);
+        var result = cpuGen.GenerateImage(prompt);
         cpuResults.Add(result);
         Console.WriteLine($"✅ CPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
     }
@@ -46,12 +41,14 @@ foreach (var prompt in samplePrompts)
 }
 Console.WriteLine("----------------------");
 Console.WriteLine("--- GPU (CUDA) Generation ---");
+
 foreach (var prompt in samplePrompts)
 {
     Console.WriteLine($"Prompt: {prompt}");
+    using var gpuGen = new ImageGenerator(device: "cuda");
     try
     {
-        var result = ImageGenerator.GenerateImage("cuda", prompt);
+        var result = gpuGen.GenerateImage(prompt);
         gpuResults.Add(result);
         Console.WriteLine($"✅ GPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
     }
