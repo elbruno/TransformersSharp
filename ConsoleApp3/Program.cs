@@ -4,22 +4,14 @@ using TransformersSharp.Pipelines;
 Console.WriteLine("=== TransformersSharp Text-to-Image Generation (Console3) ===");
 Console.WriteLine();
 
-// Test model options (uncomment as needed)
-//var model = "kandinsky-community/kandinsky-2-2-decoder";
-//var model = "sd-legacy/stable-diffusion-v1-5";
-//var model = "DeepFloyd/IF-I-M-v1.0";
-var model = "stabilityai/stable-diffusion-2-1";
+var model = "kandinsky-community/kandinsky-2-2-decoder";
 
 Console.WriteLine($"Model: {model}");
-Console.WriteLine("Device: CUDA (with CPU fallback)");
 Console.WriteLine("Prompt: A pixelated image of a beaver in Canada");
 Console.WriteLine();
 
 Console.WriteLine("Creating text-to-image pipeline...");
-var pipeline = TextToImagePipeline.FromModel(
-    model: model,
-    device: "cuda");
-
+var pipeline = TextToImagePipeline.FromModel(model: model, device: "cuda");
 Console.WriteLine("✅ Pipeline created successfully");
 Console.WriteLine($"Using device: {pipeline.DeviceType}");
 Console.WriteLine();
@@ -45,5 +37,4 @@ var destinationPath = Path.Combine(folderPath, filename);
 File.WriteAllBytes(destinationPath, result.ImageBytes);
 
 Console.WriteLine($"✅ Image saved successfully to: {destinationPath}");
-Console.WriteLine($"📊 Final device used: {pipeline.DeviceType}");
 Console.WriteLine($"📷 Image size: {result.ImageBytes.Length} bytes");

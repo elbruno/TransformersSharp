@@ -14,7 +14,6 @@ Console.WriteLine("Creating Microsoft.Extensions.AI chat client...");
 var client = TextGenerationPipelineChatClient.FromModel(model, TorchDtype.BFloat16, trustRemoteCode: true);
 Console.WriteLine("✅ Chat client created successfully");
 Console.WriteLine();
-
 Console.WriteLine("Sending message: 'tell me a story about kittens'");
 var response = await client.GetResponseAsync("tell me a story about kittens");
 
