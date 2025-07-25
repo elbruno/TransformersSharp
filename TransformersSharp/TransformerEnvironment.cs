@@ -13,12 +13,12 @@ namespace TransformersSharp
     {
         private static readonly IPythonEnvironment? _env;
         private static readonly Lock _setupLock = new();
-        private static readonly string[] _coreRequirements = 
+        private static readonly string[] _coreRequirements =
         {
             "transformers",
-            "sentence_transformers", 
+            "sentence_transformers",
             "torch",
-            "torchvision", 
+            "torchvision",
             "torchaudio",
             "pillow",
             "timm",
@@ -28,7 +28,14 @@ namespace TransformersSharp
             "psutil",
             "safetensors",
             "scipy",
-            "numpy"
+            "numpy",
+            "huggingface_hub",
+            "huggingface_hub[cli,torch]",
+            "huggingface_hub[hf_xet]",
+            "hf_xet",
+            "torch",
+            "torchvision",
+            "torchaudio"
             // Note: Standard torch packages included - pip will choose appropriate CPU/CUDA versions
             // based on system compatibility and available package variants
         };
@@ -54,7 +61,7 @@ namespace TransformersSharp
                     var paths = SetupPaths();
                     ConfigureEnvironmentVariables();
                     CreateRequirementsFile(paths.appDataPath);
-                    CreateCudaInstallationScript(paths.appDataPath);
+                    CreatePyTorchInstallationScript(paths.appDataPath);
                     ConfigurePythonServices(services, paths.appDataPath, paths.venvPath);
                 });
 
@@ -115,77 +122,32 @@ namespace TransformersSharp
         }
 
         /// <summary>
-        /// Creates the CUDA PyTorch installation script.
+        /// Creates the PyTorch installation script.
         /// </summary>
-        private static void CreateCudaInstallationScript(string appDataPath)
+        private static void CreatePyTorchInstallationScript(string appDataPath)
         {
-            string installCudaScript = Path.Join(appDataPath, "install_cuda_pytorch.py");
-            string cudaInstallScript = GetCudaInstallationScriptContent();
-            File.WriteAllText(installCudaScript, cudaInstallScript);
+            string installScript = Path.Join(appDataPath, "install_pytorch.py");
+            string installScriptContent = GetPyTorchInstallationScriptContent();
+            File.WriteAllText(installScript, installScriptContent);
         }
 
         /// <summary>
-        /// Gets the content for the CUDA installation script.
+        /// Gets the content for the PyTorch installation script.
         /// </summary>
-        /// <returns>Python script content for CUDA installation</returns>
-        private static string GetCudaInstallationScriptContent()
+        /// <returns>Python script content for PyTorch installation</returns>
+        private static string GetPyTorchInstallationScriptContent()
         {
             return @"
 import subprocess
 import sys
 import os
 
-def install_pytorch_for_version(python_version):
-    """"""Install PyTorch based on Python version.""""""
-    print(f'Installing PyTorch for Python {python_version}...')
-    
-    if python_version == '3.12':
-        return install_cpu_pytorch('Python 3.12 detected - installing CPU-only for compatibility')
-    elif python_version in ['3.10', '3.11']:
-        return install_cuda_pytorch_with_fallback(python_version)
-    else:
-        return install_cpu_pytorch(f'Python {python_version} - installing CPU-only for compatibility')
-
-def install_cpu_pytorch(message):
-    """"""Install CPU-only PyTorch.""""""
-    print(message)
-    try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
-        print('CPU-only PyTorch installed successfully.')
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f'Failed to install PyTorch: {e}')
-        return False
-
-def install_cuda_pytorch_with_fallback(python_version):
-    """"""Try CUDA PyTorch, fallback to CPU if needed.""""""
-    print(f'Python {python_version} detected - attempting CUDA PyTorch installation...')
-    try:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cu121'])
-        print('CUDA PyTorch installed successfully.')
-        
-        # Try to install xformers for optimization
-        try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'xformers'])
-            print('xFormers installed successfully for optimized performance.')
-        except subprocess.CalledProcessError:
-            print('xFormers installation failed - proceeding without it.')
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f'CUDA PyTorch installation failed: {e}')
-        print('Falling back to CPU-only version...')
-        return install_cpu_pytorch('Installing CPU-only PyTorch as fallback')
-
 def main():
     python_version = f'{sys.version_info.major}.{sys.version_info.minor}'
     print(f'Current Python version: {python_version}')
     
-    success = install_pytorch_for_version(python_version)
-    if success:
-        print('PyTorch installation complete!')
-    else:
-        print('PyTorch installation failed!')
-        sys.exit(1)
+    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio'])
+    print('PyTorch installed successfully.')
 
 if __name__ == '__main__':
     main()
@@ -197,14 +159,12 @@ if __name__ == '__main__':
         /// </summary>
         private static void ConfigurePythonServices(IServiceCollection services, string appDataPath, string venvPath)
         {
-            // Use Python 3.12 for now (CUDA support limited to CPU-only packages)
-            // Future: Switch to Python 3.10/3.11 when CSnakes properly supports them
             services
                 .WithPython()
                 .WithHome(appDataPath)
                 .WithVirtualEnvironment(venvPath)
                 .WithUvInstaller()
-                .FromRedistributable(); // Use default Python 3.12
+                .FromRedistributable();
         }
 
         /// <summary>
@@ -216,7 +176,7 @@ if __name__ == '__main__':
         /// Gets the Transformers wrapper for Python interop.
         /// </summary>
         internal static ITransformersWrapper TransformersWrapper => Env.TransformersWrapper();
-        
+
         /// <summary>
         /// Gets the Sentence Transformers wrapper for Python interop.
         /// </summary>
@@ -250,28 +210,29 @@ if __name__ == '__main__':
         }
 
         /// <summary>
-        /// Installs CUDA-enabled PyTorch. Call this method if you need GPU acceleration.
+        /// Installs PyTorch. Call this method if you need GPU acceleration and don't have it installed.
+        /// Pip will select the correct version (CPU or GPU) based on your system.
         /// </summary>
         /// <param name="executeAutomatically">If true, executes the installation automatically. If false, displays instructions only.</param>
         /// <returns>True if installation succeeded or was completed, false otherwise.</returns>
-        public static bool InstallCudaPyTorch(bool executeAutomatically = true)
+        public static bool InstallPyTorch(bool executeAutomatically = true)
         {
             try
             {
                 var paths = GetApplicationPaths();
-                string installScript = Path.Join(paths.appDataPath, "install_cuda_pytorch.py");
+                string installScript = Path.Join(paths.appDataPath, "install_pytorch.py");
 
                 if (!File.Exists(installScript))
                 {
                     Console.WriteLine($"Installation script not found at: {installScript}");
                     Console.WriteLine("Please ensure TransformersSharp is properly initialized.");
-                    
+
                     if (executeAutomatically)
                     {
                         // Try to recreate the script
                         try
                         {
-                            CreateCudaInstallationScript(paths.appDataPath);
+                            CreatePyTorchInstallationScript(paths.appDataPath);
                             Console.WriteLine("Installation script recreated successfully.");
                         }
                         catch (Exception ex)
@@ -289,7 +250,7 @@ if __name__ == '__main__':
 
                 if (executeAutomatically)
                 {
-                    return ExecuteCudaInstallation(paths, installScript);
+                    return ExecutePyTorchInstallation(paths, installScript);
                 }
                 else
                 {
@@ -301,29 +262,29 @@ if __name__ == '__main__':
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to install CUDA PyTorch: {ex.Message}");
+                Console.WriteLine($"Failed to install PyTorch: {ex.Message}");
                 DisplayManualInstallationInstructions();
                 return false;
             }
         }
 
         /// <summary>
-        /// Executes the CUDA PyTorch installation automatically.
+        /// Executes the PyTorch installation automatically.
         /// </summary>
         /// <param name="paths">Application paths</param>
         /// <param name="installScript">Path to the installation script</param>
         /// <returns>True if installation succeeded, false otherwise</returns>
-        private static bool ExecuteCudaInstallation((string appDataPath, string venvPath) paths, string installScript)
+        private static bool ExecutePyTorchInstallation((string appDataPath, string venvPath) paths, string installScript)
         {
             try
             {
-                Console.WriteLine("🚀 Starting automatic CUDA PyTorch installation...");
+                Console.WriteLine("🚀 Starting automatic PyTorch installation...");
                 Console.WriteLine("This may take several minutes depending on your internet connection.");
                 Console.WriteLine();
 
                 // Get the Python executable from the virtual environment
                 string pythonExecutable = GetPythonExecutablePath(paths.venvPath);
-                
+
                 if (!File.Exists(pythonExecutable))
                 {
                     Console.WriteLine($"❌ Python executable not found at: {pythonExecutable}");
@@ -348,14 +309,16 @@ if __name__ == '__main__':
                 };
 
                 using var process = new System.Diagnostics.Process { StartInfo = processInfo };
-                
+
                 // Handle output in real-time
-                process.OutputDataReceived += (sender, e) => {
+                process.OutputDataReceived += (sender, e) =>
+                {
                     if (!string.IsNullOrEmpty(e.Data))
                         Console.WriteLine($"📦 {e.Data}");
                 };
-                
-                process.ErrorDataReceived += (sender, e) => {
+
+                process.ErrorDataReceived += (sender, e) =>
+                {
                     if (!string.IsNullOrEmpty(e.Data))
                         Console.WriteLine($"⚠️  {e.Data}");
                 };
@@ -363,18 +326,18 @@ if __name__ == '__main__':
                 process.Start();
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
-                
+
                 process.WaitForExit();
 
                 if (process.ExitCode == 0)
                 {
                     Console.WriteLine();
-                    Console.WriteLine("✅ CUDA PyTorch installation completed successfully!");
+                    Console.WriteLine("✅ PyTorch installation completed successfully!");
                     Console.WriteLine("🔄 Checking CUDA availability...");
-                    
+
                     // Wait a moment for the installation to take effect
                     System.Threading.Thread.Sleep(2000);
-                    
+
                     // Verify installation by checking CUDA availability
                     try
                     {
@@ -394,7 +357,7 @@ if __name__ == '__main__':
                     {
                         Console.WriteLine($"⚠️  Could not verify CUDA availability after installation: {ex.Message}");
                     }
-                    
+
                     return true;
                 }
                 else
@@ -451,7 +414,7 @@ if __name__ == '__main__':
             Console.WriteLine("To install PyTorch with proper compatibility, please run:");
             Console.WriteLine($"1. Open PowerShell and navigate to: {paths.appDataPath}");
             Console.WriteLine($"2. Activate the virtual environment: {paths.venvPath}\\Scripts\\Activate.ps1");
-            Console.WriteLine($"3. Run the installation script: python install_cuda_pytorch.py");
+            Console.WriteLine($"3. Run the installation script: python install_pytorch.py");
             Console.WriteLine("4. Restart your application after installation completes");
             Console.WriteLine();
             Console.WriteLine("The script will automatically choose the best PyTorch version for your Python installation.");
@@ -463,9 +426,9 @@ if __name__ == '__main__':
         private static void DisplayManualInstallationInstructions()
         {
             Console.WriteLine("You can manually install compatible PyTorch by running:");
-            Console.WriteLine("For Python 3.12: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu");
-            Console.WriteLine("For Python 3.10/3.11: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121");
-            Console.WriteLine("Note: Avoid installing xformers with Python 3.12 to prevent compatibility warnings.");
+            Console.WriteLine("pip install torch torchvision torchaudio");
+            Console.WriteLine("For specific versions (e.g., CUDA), please refer to the official PyTorch website:");
+            Console.WriteLine("https://pytorch.org/get-started/locally/");
         }
 
         /// <summary>
@@ -619,7 +582,7 @@ if __name__ == '__main__':
         public static Dictionary<string, object> GetRecommendedSettingsForModel(string model)
         {
             var pythonDict = TransformersWrapper.GetRecommendedSettingsForModel(model);
-            
+
             // Convert Python dict to C# Dictionary
             var result = new Dictionary<string, object>();
             foreach (var key in pythonDict.Keys)
