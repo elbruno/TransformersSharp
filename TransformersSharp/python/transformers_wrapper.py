@@ -114,6 +114,103 @@ def validate_and_get_device(requested_device: Optional[str] = None, silent: bool
     
     return requested_device
 
+def check_text_to_image_compatibility() -> dict[str, Any]:
+    """
+    Check if text-to-image pipelines can be created successfully.
+    Returns detailed information about compatibility issues.
+    """
+    try:
+        # Check if diffusers can be imported and used
+        from diffusers import AutoPipelineForText2Image
+        
+        # Get environment information
+        import sys
+        pytorch_version = torch.__version__
+        python_version = sys.version.split()[0]
+        
+        # Check if CUDA is available
+        cuda_available = torch.cuda.is_available()
+        
+        # Try to determine if this is a CUDA vs CPU compatibility issue
+        is_cuda_pytorch = '+cu' in pytorch_version
+        
+        result = {
+            "compatible": True,
+            "can_create_pipeline": True,
+            "pytorch_version": pytorch_version,
+            "python_version": python_version,
+            "cuda_available": cuda_available,
+            "is_cuda_pytorch": is_cuda_pytorch,
+            "message": "Text-to-image pipelines should work correctly"
+        }
+        
+        return result
+        
+    except ImportError as e:
+        if "_C" in str(e) or "DLL load failed" in str(e):
+            return {
+                "compatible": False,
+                "can_create_pipeline": False,
+                "error_type": "dll_compatibility_error",
+                "pytorch_version": torch.__version__,
+                "python_version": sys.version.split()[0],
+                "cuda_available": torch.cuda.is_available(),
+                "is_cuda_pytorch": '+cu' in torch.__version__,
+                "message": "Diffusers cannot load C extensions - likely PyTorch/diffusers version incompatibility",
+                "error_details": str(e),
+                "recommended_action": "reinstall_compatible_packages"
+            }
+        else:
+            return {
+                "compatible": False,
+                "can_create_pipeline": False,
+                "error_type": "import_error",
+                "pytorch_version": torch.__version__,
+                "python_version": sys.version.split()[0],
+                "cuda_available": torch.cuda.is_available(),
+                "message": f"Cannot import diffusers: {str(e)}",
+                "error_details": str(e),
+                "recommended_action": "install_diffusers"
+            }
+    except Exception as e:
+        return {
+            "compatible": False,
+            "can_create_pipeline": False,
+            "error_type": "unknown_error",
+            "pytorch_version": torch.__version__,
+            "python_version": sys.version.split()[0],
+            "cuda_available": torch.cuda.is_available(),
+            "message": f"Unknown error checking compatibility: {str(e)}",
+            "error_details": str(e),
+            "recommended_action": "check_installation"
+        }
+
+def check_package_compatibility():
+    """
+    Check if the current PyTorch and diffusers installation is compatible.
+    Returns a tuple of (is_compatible, error_message)
+    """
+    try:
+        # Check if diffusers can be imported and used
+        from diffusers import AutoPipelineForText2Image
+        
+        # Try to instantiate a simple pipeline to test C extensions
+        # This will fail if there are DLL/compatibility issues
+        import tempfile
+        import os
+        
+        # Use a very small test - just check if we can access the class
+        pipeline_class = AutoPipelineForText2Image
+        
+        return True, None
+    except ImportError as e:
+        if "_C" in str(e) or "DLL load failed" in str(e):
+            return False, "diffusers_dll_error"
+        else:
+            return False, f"diffusers_import_error: {str(e)}"
+    except Exception as e:
+        return False, f"diffusers_unknown_error: {str(e)}"
+
 def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer: Optional[str] = None, torch_dtype: Optional[str] = None, device: Optional[str] = None, trust_remote_code: bool = False, silent_device_fallback: bool = False):
     """
     Create a pipeline for a specific task using the Hugging Face Transformers library.
@@ -129,12 +226,76 @@ def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer:
     
     # Handle text-to-image using diffusers
     if task == "text-to-image":
-        from diffusers import AutoPipelineForText2Image
-        # Remove trust_remote_code for diffusers pipelines to avoid warning
-        return AutoPipelineForText2Image.from_pretrained(
-            model, 
-            torch_dtype=torch_dtype
-        ).to(device)
+        # Check package compatibility first
+        is_compatible, error_msg = check_package_compatibility()
+        
+        if not is_compatible:
+            if error_msg == "diffusers_dll_error":
+                # Provide specific guidance for DLL/compatibility issues
+                pytorch_version = torch.__version__
+                import sys
+                python_version = sys.version
+                
+                error_message = f"""
+Text-to-image pipeline creation failed due to package compatibility issues.
+
+ISSUE: Diffusers library cannot load required C extensions
+CAUSE: Incompatible PyTorch and diffusers versions for your system
+
+Current Environment:
+- PyTorch: {pytorch_version}
+- Python: {python_version.split()[0]}
+- Device requested: {device}
+
+SOLUTION:
+1. Uninstall current packages:
+   pip uninstall torch torchvision torchaudio diffusers xformers -y
+
+2. Install compatible versions:
+   For CPU-only:
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+   pip install diffusers[torch] --no-deps
+   pip install safetensors accelerate
+
+   For CUDA (if you have NVIDIA GPU):
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+   pip install diffusers xformers
+
+3. Restart your application
+
+This error commonly occurs when:
+- PyTorch CPU version is mixed with CUDA-compiled extensions
+- Python version mismatches with compiled packages
+- Missing Visual C++ Redistributables (Windows)
+"""
+                raise RuntimeError(error_message)
+            else:
+                raise RuntimeError(f"Cannot create text-to-image pipeline: {error_msg}")
+        
+        try:
+            from diffusers import AutoPipelineForText2Image
+            # Remove trust_remote_code for diffusers pipelines to avoid warning
+            return AutoPipelineForText2Image.from_pretrained(
+                model, 
+                torch_dtype=torch_dtype
+            ).to(device)
+        except Exception as e:
+            # If we still get an error despite compatibility check, provide guidance
+            error_message = f"""
+Text-to-image pipeline creation failed: {str(e)}
+
+This may be due to:
+1. Model download issues - ensure internet connectivity
+2. Insufficient disk space for model files
+3. Model incompatibility with current diffusers version
+
+Try:
+1. Check your internet connection
+2. Ensure you have sufficient disk space (models can be several GB)
+3. Try a different model like 'runwayml/stable-diffusion-v1-5'
+4. Update diffusers: pip install --upgrade diffusers
+"""
+            raise RuntimeError(error_message)
     
     # Only pass trust_remote_code for transformers pipelines
     return TransformersPipeline(task=task, model=model, tokenizer=tokenizer, torch_dtype=torch_dtype, device=device, trust_remote_code=trust_remote_code)

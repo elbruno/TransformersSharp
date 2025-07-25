@@ -19,6 +19,36 @@ Console.WriteLine();
 Console.WriteLine("=== TransformersSharp Image Generation Performance Test ===\n");
 Console.WriteLine("Image size: 256x256 pixels\n");
 
+// Perform early diagnostic check for text-to-image compatibility
+Console.WriteLine("=== Diagnostic Check ===");
+try
+{
+    // Try to detect potential issues before starting tests
+    var testModel = "stabilityai/stable-diffusion-2-1-base";
+    Console.WriteLine($"Testing text-to-image pipeline compatibility...");
+    
+    // This will trigger any import or compatibility errors early
+    using var testGenerator = new ImageGenerator(model: testModel, device: "cpu");
+    Console.WriteLine("✅ Text-to-image pipeline compatibility check passed");
+}
+catch (InvalidOperationException ex) when (ex.Message.Contains("package compatibility"))
+{
+    Console.WriteLine("❌ Text-to-image pipeline compatibility check failed");
+    Console.WriteLine();
+    Console.WriteLine("🚨 CRITICAL ISSUE DETECTED:");
+    Console.WriteLine(ex.Message);
+    Console.WriteLine();
+    Console.WriteLine("Cannot proceed with image generation tests until this is resolved.");
+    Console.WriteLine("Please follow the solution steps above and restart the application.");
+    return;
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"⚠️  Text-to-image pipeline compatibility check failed: {ex.Message}");
+    Console.WriteLine("Proceeding with tests, but may encounter errors...");
+}
+Console.WriteLine();
+
 // Check device capabilities
 Console.WriteLine("=== Device Capability Check ===");
 var deviceInfo = TransformerEnvironment.GetDeviceInfo();
@@ -64,16 +94,33 @@ foreach (var prompt in samplePrompts)
 {
     Console.WriteLine(" >> start image generation ...");
     Console.WriteLine($" >> Prompt: {prompt}");
-    using var cpuGen = new ImageGenerator(device: "cpu");
+    
     try
     {
+        using var cpuGen = new ImageGenerator(device: "cpu");
         var result = cpuGen.GenerateImage(prompt);
         cpuResults.Add(result);
         Console.WriteLine($" >> ✅ CPU: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
     }
+    catch (InvalidOperationException ex) when (ex.Message.Contains("package compatibility"))
+    {
+        Console.WriteLine($">> ❌ CPU test failed due to package compatibility issues:");
+        Console.WriteLine($"   {ex.Message}");
+        Console.WriteLine();
+        Console.WriteLine("   🚨 CRITICAL: Cannot continue with current Python package installation.");
+        Console.WriteLine("   Please follow the solution steps above to fix the installation.");
+        Console.WriteLine();
+        return; // Exit the program as we can't proceed
+    }
     catch (Exception ex)
     {
         Console.WriteLine($">> ❌ CPU test failed: {ex.Message}");
+        // Try to extract useful information from the error
+        if (ex.Message.Contains("DLL load failed") || ex.Message.Contains("_C"))
+        {
+            Console.WriteLine("   This appears to be a package compatibility issue.");
+            Console.WriteLine("   Try reinstalling PyTorch and diffusers with compatible versions.");
+        }
     }
     Console.WriteLine(" >> image generation complete");
     Console.WriteLine(" >> ");

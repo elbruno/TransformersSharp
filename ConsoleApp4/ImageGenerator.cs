@@ -55,11 +55,84 @@ public class ImageGenerator : IDisposable
         GC.Collect();
         GC.WaitForPendingFinalizers();
 
-        // Create new pipeline instance with silent device fallback
-        _pipeline = TextToImagePipeline.FromModel(
-            model: _model,
-            device: _device,
-            silentDeviceFallback: true);
+        try
+        {
+            // Create new pipeline instance with silent device fallback
+            _pipeline = TextToImagePipeline.FromModel(
+                model: _model,
+                device: _device,
+                silentDeviceFallback: true);
+        }
+        catch (Exception ex) when (ex.Message.Contains("DLL load failed") || 
+                                  ex.Message.Contains("diffusers") || 
+                                  ex.Message.Contains("_C") ||
+                                  ex.Message.Contains("xFormers") ||
+                                  ex.Message.Contains("package compatibility"))
+        {
+            // Handle diffusers/PyTorch compatibility issues
+            throw new InvalidOperationException($@"
+❌ Text-to-image pipeline creation failed due to package compatibility issues.
+
+PROBLEM: The current PyTorch and diffusers installation has compatibility issues.
+This commonly occurs when:
+- CPU-only PyTorch is mixed with CUDA-compiled extensions
+- Package versions are incompatible
+- Missing system dependencies (Visual C++ Redistributables on Windows)
+
+CURRENT SETUP ISSUES:
+{ex.Message}
+
+SOLUTIONS:
+
+🔧 Option 1 - Reinstall compatible packages (Recommended):
+1. Uninstall conflicting packages:
+   pip uninstall torch torchvision torchaudio diffusers xformers -y
+
+2. Install CPU-compatible versions:
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+   pip install diffusers --no-deps
+   pip install safetensors accelerate
+
+3. Restart your application
+
+🔧 Option 2 - Install CUDA version (if you have NVIDIA GPU):
+1. Ensure NVIDIA drivers are installed
+2. Run: TransformerEnvironment.InstallCudaPyTorch()
+3. Restart your application
+
+🔧 Option 3 - Use a different model:
+Try a lighter model that may have better compatibility:
+- stabilityai/stable-diffusion-2-1-base (current)
+- runwayml/stable-diffusion-v1-5
+- kandinsky-community/kandinsky-2-1
+
+For more help, see: https://pytorch.org/get-started/locally/
+", ex);
+        }
+        catch (Exception ex)
+        {
+            // Handle other pipeline creation errors
+            throw new InvalidOperationException($@"
+❌ Failed to create text-to-image pipeline.
+
+ERROR: {ex.Message}
+
+POSSIBLE CAUSES:
+- Network connectivity issues during model download
+- Insufficient disk space (models can be several GB)
+- Model unavailable or access restricted
+- Invalid model name: '{_model}'
+
+SOLUTIONS:
+1. Check your internet connection
+2. Ensure sufficient disk space (at least 5GB free)
+3. Try a different model name
+4. Verify the model exists at: https://huggingface.co/{_model}
+
+If the problem persists, try using a well-known model like:
+'stabilityai/stable-diffusion-2-1-base' or 'runwayml/stable-diffusion-v1-5'
+", ex);
+        }
     }
 
     /// <summary>
