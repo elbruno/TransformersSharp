@@ -1,8 +1,11 @@
 ﻿using TransformersSharp;
 using TransformersSharp.Pipelines;
 
+//var model = "kandinsky-community/kandinsky-2-2-decoder";
+var model = "sd-legacy/stable-diffusion-v1-5";
+
 var pipeline = TextToImagePipeline.FromModel(
-    model: "kandinsky-community/kandinsky-2-2-decoder",
+    model: model,
     device: "cuda");
 
 var result = pipeline.Generate(
