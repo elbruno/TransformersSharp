@@ -159,46 +159,80 @@ namespace TransformersSharp.EnvironmentTest
 
             try
             {
-                // Test CUDA availability
-                bool cudaAvailable = TransformerEnvironment.IsCudaAvailable();
-                Console.WriteLine($"CUDA Available: {(cudaAvailable ? "✅ Yes" : "❌ No")}");
+                // Test initial CUDA availability
+                bool initialCudaAvailable = TransformerEnvironment.IsCudaAvailable();
+                Console.WriteLine($"Initial CUDA Available: {(initialCudaAvailable ? "✅ Yes" : "❌ No")}");
 
-                if (cudaAvailable)
+                if (initialCudaAvailable)
                 {
                     Console.WriteLine("CUDA capabilities detected:");
                     Console.WriteLine("- GPU acceleration supported");
                     Console.WriteLine("- Text-to-image generation can use GPU");
                     Console.WriteLine("- Faster model inference available");
+                    TestResults["cuda_available"] = true;
+                    TestResults["cuda_installation_attempted"] = false;
                 }
                 else
                 {
-                    Console.WriteLine("CUDA not available:");
-                    Console.WriteLine("- Using CPU-only processing");
-                    Console.WriteLine("- Consider installing CUDA-enabled PyTorch for GPU acceleration");
-                    Console.WriteLine("- Run TransformerEnvironment.InstallCudaPyTorch() if you have NVIDIA GPU");
-                }
-
-                TestResults["cuda_available"] = cudaAvailable;
-
-                // Test CUDA installation guidance
-                if (!cudaAvailable)
-                {
+                    Console.WriteLine("CUDA not available - attempting automatic installation...");
+                    Console.WriteLine("- Using CPU-only processing currently");
+                    Console.WriteLine("- Attempting to install CUDA-enabled PyTorch");
+                    
+                    // Attempt automatic CUDA installation
                     Console.WriteLine();
-                    Console.WriteLine("Testing CUDA installation guidance...");
+                    Console.WriteLine("🔧 Attempting automatic CUDA PyTorch installation...");
+                    TestResults["cuda_installation_attempted"] = true;
+                    
                     try
                     {
-                        TransformerEnvironment.InstallCudaPyTorch();
-                        Console.WriteLine("✅ CUDA installation guidance provided successfully");
-                        TestResults["cuda_install_guidance"] = true;
+                        bool installationResult = TransformerEnvironment.InstallCudaPyTorch(executeAutomatically: true);
+                        
+                        if (installationResult)
+                        {
+                            Console.WriteLine("✅ CUDA installation process completed successfully");
+                            TestResults["cuda_installation_success"] = true;
+                            
+                            // Re-check CUDA availability after installation
+                            Console.WriteLine();
+                            Console.WriteLine("🔍 Re-checking CUDA availability after installation...");
+                            
+                            // Small delay to ensure installation effects are visible
+                            System.Threading.Thread.Sleep(3000);
+                            
+                            bool finalCudaAvailable = TransformerEnvironment.IsCudaAvailable();
+                            Console.WriteLine($"CUDA Available After Installation: {(finalCudaAvailable ? "✅ Yes" : "❌ No")}");
+                            
+                            TestResults["cuda_available"] = finalCudaAvailable;
+                            TestResults["cuda_installation_improved_availability"] = finalCudaAvailable && !initialCudaAvailable;
+                            
+                            if (finalCudaAvailable && !initialCudaAvailable)
+                            {
+                                Console.WriteLine("🎉 Success! CUDA installation enabled GPU acceleration!");
+                            }
+                            else if (!finalCudaAvailable)
+                            {
+                                Console.WriteLine("ℹ️  CUDA installation completed, but GPU acceleration is not available.");
+                                Console.WriteLine("   This is normal if you don't have a compatible NVIDIA GPU.");
+                                Console.WriteLine("   CPU-optimized PyTorch has been installed instead.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("❌ CUDA installation process failed");
+                            TestResults["cuda_installation_success"] = false;
+                            TestResults["cuda_available"] = false;
+                        }
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"⚠️  CUDA installation guidance error: {ex.Message}");
-                        TestResults["cuda_install_guidance_error"] = ex.Message;
+                        Console.WriteLine($"❌ CUDA installation failed with exception: {ex.Message}");
+                        TestResults["cuda_installation_error"] = ex.Message;
+                        TestResults["cuda_installation_success"] = false;
+                        TestResults["cuda_available"] = false;
                     }
                 }
 
-                Console.WriteLine("✅ CUDA Detection Test Complete");
+                Console.WriteLine("✅ CUDA Detection and Installation Test Complete");
             }
             catch (Exception ex)
             {
@@ -413,6 +447,18 @@ namespace TransformersSharp.EnvironmentTest
             Console.WriteLine();
             Console.WriteLine("Device Capabilities:");
             Console.WriteLine($"  CUDA Available: {GetTestResult("cuda_available", "Unknown")}");
+            Console.WriteLine($"  CUDA Installation Attempted: {GetTestResult("cuda_installation_attempted", "Unknown")}");
+            
+            if (TestResults.ContainsKey("cuda_installation_attempted") && (bool)TestResults["cuda_installation_attempted"])
+            {
+                Console.WriteLine($"  CUDA Installation Success: {GetTestResult("cuda_installation_success", "Unknown")}");
+                
+                if (TestResults.ContainsKey("cuda_installation_improved_availability") && (bool)TestResults["cuda_installation_improved_availability"])
+                {
+                    Console.WriteLine("  🎉 CUDA Installation Enabled GPU Acceleration!");
+                }
+            }
+            
             Console.WriteLine($"  Device Info Available: {GetTestResult("device_info_available", "Unknown")}");
             Console.WriteLine($"  System Info Sections: {GetTestResult("system_info_count", "Unknown")}");
 
@@ -453,8 +499,30 @@ namespace TransformersSharp.EnvironmentTest
             
             if (TestResults.ContainsKey("cuda_available") && !(bool)TestResults["cuda_available"])
             {
-                Console.WriteLine("• Consider installing CUDA-enabled PyTorch for GPU acceleration");
-                Console.WriteLine("• Run TransformerEnvironment.InstallCudaPyTorch() if you have NVIDIA GPU");
+                if (TestResults.ContainsKey("cuda_installation_attempted") && (bool)TestResults["cuda_installation_attempted"])
+                {
+                    if (TestResults.ContainsKey("cuda_installation_success") && (bool)TestResults["cuda_installation_success"])
+                    {
+                        Console.WriteLine("• CUDA installation completed - CPU-optimized PyTorch now available");
+                        Console.WriteLine("• GPU acceleration may not be available if you don't have a compatible NVIDIA GPU");
+                    }
+                    else
+                    {
+                        Console.WriteLine("• CUDA installation was attempted but failed");
+                        Console.WriteLine("• You can manually run TransformerEnvironment.InstallCudaPyTorch(false) for instructions");
+                        Console.WriteLine("• Check the error messages above for specific installation issues");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("• Consider installing CUDA-enabled PyTorch for GPU acceleration");
+                    Console.WriteLine("• Run TransformerEnvironment.InstallCudaPyTorch() if you have NVIDIA GPU");
+                }
+            }
+            else if (TestResults.ContainsKey("cuda_available") && (bool)TestResults["cuda_available"])
+            {
+                Console.WriteLine("• 🎉 GPU acceleration is available and ready to use!");
+                Console.WriteLine("• Your text-to-image generation will benefit from faster processing");
             }
 
             Console.WriteLine("• Run this test periodically to ensure environment health");

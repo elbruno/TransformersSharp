@@ -249,7 +249,9 @@ if __name__ == '__main__':
         /// <summary>
         /// Installs CUDA-enabled PyTorch. Call this method if you need GPU acceleration.
         /// </summary>
-        public static void InstallCudaPyTorch()
+        /// <param name="executeAutomatically">If true, executes the installation automatically. If false, displays instructions only.</param>
+        /// <returns>True if installation succeeded or was completed, false otherwise.</returns>
+        public static bool InstallCudaPyTorch(bool executeAutomatically = true)
         {
             try
             {
@@ -260,17 +262,170 @@ if __name__ == '__main__':
                 {
                     Console.WriteLine($"Installation script not found at: {installScript}");
                     Console.WriteLine("Please ensure TransformersSharp is properly initialized.");
-                    return;
+                    
+                    if (executeAutomatically)
+                    {
+                        // Try to recreate the script
+                        try
+                        {
+                            CreateCudaInstallationScript(paths.appDataPath);
+                            Console.WriteLine("Installation script recreated successfully.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to recreate installation script: {ex.Message}");
+                            DisplayManualInstallationInstructions();
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
 
-                Console.WriteLine("Installing PyTorch and compatible packages...");
-                Console.WriteLine("This may take a few minutes...");
-                DisplayInstallationInstructions(paths);
+                if (executeAutomatically)
+                {
+                    return ExecuteCudaInstallation(paths, installScript);
+                }
+                else
+                {
+                    Console.WriteLine("Installing PyTorch and compatible packages...");
+                    Console.WriteLine("This may take a few minutes...");
+                    DisplayInstallationInstructions(paths);
+                    return true; // Instructions displayed successfully
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to install CUDA PyTorch: {ex.Message}");
                 DisplayManualInstallationInstructions();
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Executes the CUDA PyTorch installation automatically.
+        /// </summary>
+        /// <param name="paths">Application paths</param>
+        /// <param name="installScript">Path to the installation script</param>
+        /// <returns>True if installation succeeded, false otherwise</returns>
+        private static bool ExecuteCudaInstallation((string appDataPath, string venvPath) paths, string installScript)
+        {
+            try
+            {
+                Console.WriteLine("🚀 Starting automatic CUDA PyTorch installation...");
+                Console.WriteLine("This may take several minutes depending on your internet connection.");
+                Console.WriteLine();
+
+                // Get the Python executable from the virtual environment
+                string pythonExecutable = GetPythonExecutablePath(paths.venvPath);
+                
+                if (!File.Exists(pythonExecutable))
+                {
+                    Console.WriteLine($"❌ Python executable not found at: {pythonExecutable}");
+                    Console.WriteLine("Virtual environment may not be properly initialized.");
+                    return false;
+                }
+
+                Console.WriteLine($"📍 Using Python: {pythonExecutable}");
+                Console.WriteLine($"📍 Running script: {installScript}");
+                Console.WriteLine();
+
+                // Execute the installation script
+                var processInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = pythonExecutable,
+                    Arguments = $"\"{installScript}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = paths.appDataPath
+                };
+
+                using var process = new System.Diagnostics.Process { StartInfo = processInfo };
+                
+                // Handle output in real-time
+                process.OutputDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        Console.WriteLine($"📦 {e.Data}");
+                };
+                
+                process.ErrorDataReceived += (sender, e) => {
+                    if (!string.IsNullOrEmpty(e.Data))
+                        Console.WriteLine($"⚠️  {e.Data}");
+                };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                
+                process.WaitForExit();
+
+                if (process.ExitCode == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine("✅ CUDA PyTorch installation completed successfully!");
+                    Console.WriteLine("🔄 Checking CUDA availability...");
+                    
+                    // Wait a moment for the installation to take effect
+                    System.Threading.Thread.Sleep(2000);
+                    
+                    // Verify installation by checking CUDA availability
+                    try
+                    {
+                        bool cudaAvailable = IsCudaAvailable();
+                        if (cudaAvailable)
+                        {
+                            Console.WriteLine("🎉 CUDA is now available for GPU acceleration!");
+                        }
+                        else
+                        {
+                            Console.WriteLine("⚠️  Installation completed, but CUDA is still not available.");
+                            Console.WriteLine("   This is normal if you don't have a compatible NVIDIA GPU.");
+                            Console.WriteLine("   CPU-only PyTorch has been installed instead.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️  Could not verify CUDA availability after installation: {ex.Message}");
+                    }
+                    
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"❌ Installation failed with exit code: {process.ExitCode}");
+                    Console.WriteLine("Falling back to manual installation instructions...");
+                    DisplayManualInstallationInstructions();
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Automatic installation failed: {ex.Message}");
+                Console.WriteLine("Falling back to manual installation instructions...");
+                DisplayManualInstallationInstructions();
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets the path to the Python executable in the virtual environment.
+        /// </summary>
+        /// <param name="venvPath">Path to the virtual environment</param>
+        /// <returns>Path to the Python executable</returns>
+        private static string GetPythonExecutablePath(string venvPath)
+        {
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                return Path.Join(venvPath, "Scripts", "python.exe");
+            }
+            else
+            {
+                return Path.Join(venvPath, "bin", "python");
             }
         }
 
