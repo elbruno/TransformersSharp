@@ -20,10 +20,75 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from collections.abc import Buffer
 from PIL import Image
 
-# Import functionality from separate modules
-from device_manager import is_cuda_available, get_device_info, validate_and_get_device
-from system_info import get_detailed_system_info
-from image_utils import convert_image_to_bytes
+# Import functionality from separate modules with fallbacks
+try:
+    from device_manager import is_cuda_available, get_device_info, validate_and_get_device
+except ImportError:
+    # Fallback implementations if module not available
+    def is_cuda_available() -> bool:
+        """Check if CUDA is available for PyTorch."""
+        return torch.cuda.is_available()
+
+    def get_device_info() -> dict:
+        """Get information about available devices."""
+        cuda_available = torch.cuda.is_available()
+        return {
+            "cuda_available": cuda_available,
+            "cuda_device_count": torch.cuda.device_count() if cuda_available else 0,
+            "current_device": torch.cuda.current_device() if cuda_available else None,
+            "device_name": torch.cuda.get_device_name() if cuda_available else None
+        }
+
+    def validate_and_get_device(requested_device: Optional[str] = None, silent: bool = False) -> str:
+        """Validate the requested device and return the best available device."""
+        if requested_device is None:
+            return "cuda" if torch.cuda.is_available() else "cpu"
+        
+        if requested_device.lower() == "cuda":
+            if torch.cuda.is_available():
+                return "cuda"
+            else:
+                if not silent:
+                    print("Warning: CUDA requested but not available. PyTorch was not compiled with CUDA support. Falling back to CPU.")
+                return "cpu"
+        
+        return requested_device
+
+try:
+    from system_info import get_detailed_system_info
+except ImportError:
+    # Fallback implementation if module not available
+    def get_detailed_system_info() -> dict:
+        """Get detailed system information."""
+        import platform
+        import psutil
+        
+        return {
+            "platform": f"{platform.system()} {platform.release()}",
+            "architecture": "64-bit" if platform.machine().endswith('64') else "32-bit",
+            "processor_count": psutil.cpu_count(),
+            "python_version": f"{platform.python_version()}",
+            "memory_info": {
+                "working_set_mb": psutil.Process().memory_info().rss / 1024 / 1024
+            }
+        }
+
+try:
+    from image_utils import convert_image_to_bytes
+except ImportError:
+    # Fallback implementation if module not available  
+    def convert_image_to_bytes(image) -> bytes:
+        """Convert PIL Image to bytes."""
+        from io import BytesIO
+        
+        if hasattr(image, 'save'):
+            # PIL Image
+            buffer = BytesIO()
+            image.save(buffer, format='PNG')
+            return buffer.getvalue()
+        else:
+            # Already bytes or other format
+            return bytes(image)
 
 
 # ==============================================================================

@@ -17,6 +17,9 @@ namespace TransformersSharp
         {
             "transformers",
             "sentence_transformers", 
+            "torch",
+            "torchvision", 
+            "torchaudio",
             "pillow",
             "timm",
             "einops",
@@ -26,8 +29,8 @@ namespace TransformersSharp
             "safetensors",
             "scipy",
             "numpy"
-            // Note: torch, torchvision, torchaudio, and xformers are handled separately
-            // to ensure compatibility between CPU/CUDA versions and Python versions
+            // Note: Standard torch packages included - pip will choose appropriate CPU/CUDA versions
+            // based on system compatibility and available package variants
         };
 
         static TransformerEnvironment()
