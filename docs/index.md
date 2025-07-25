@@ -22,6 +22,14 @@ This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes)
 - [Automatic Speech Recognition (`AutomaticSpeechRecognitionPipeline`)](pipelines/auto_speech_recognition.md)
 - [Sentence Transformers (Embeddings)](sentence_transformers.md)
 
+## Project Structure
+
+- **TransformersSharp.sln** - Main solution containing the TransformersSharp library and unit tests
+- **DemoConsole/** - Console applications and demos demonstrating library features
+  - **DemoConsole.sln** - Solution file for all demo projects
+  - **ConsoleApp1-4** - Various example applications
+  - **TransformersSharp.EnvironmentTest** - Environment validation and testing
+
 ## Architecture
 
 - [Python Module Architecture](python_modules.md) - Modular Python wrapper design

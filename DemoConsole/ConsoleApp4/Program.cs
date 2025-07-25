@@ -141,7 +141,7 @@ namespace ConsoleApp4
 
             try
             {
-                TransformerEnvironment.InstallCudaPyTorch();
+                TransformerEnvironment.InstallPyTorch();
                 Console.WriteLine("✅ CUDA PyTorch installation initiated");
                 Console.WriteLine("⚠️  Please restart the application after installation completes");
             }
