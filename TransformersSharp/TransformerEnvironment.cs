@@ -61,7 +61,11 @@ namespace TransformersSharp
                             "einops",
                             "diffusers",
                             "accelerate",
-                            "psutil"
+                            "psutil",
+                            "xformers",
+                            "safetensors",
+                            "scipy",
+                            "numpy"
                         };
 
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));

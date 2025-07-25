@@ -5,10 +5,10 @@ using TransformersSharp;
 var samplePrompts = new[]
 {
     "A pixelated image of a beaver in Canada.",
-    "A futuristic city skyline at sunset.",
-    "A cat riding a skateboard in a park.",
-    "A surreal landscape with floating islands.",
-    "A robot playing soccer on the moon."
+    // "A futuristic city skyline at sunset.",
+    // "A cat riding a skateboard in a park.",
+    // "A surreal landscape with floating islands.",
+    // "A robot playing soccer on the moon."
 };
 
 var cpuResults = new List<ImageGenerationResult>();
@@ -42,7 +42,19 @@ else
     Console.WriteLine("To enable GPU acceleration:");
     Console.WriteLine("  1. Ensure you have a compatible NVIDIA GPU");
     Console.WriteLine("  2. Install NVIDIA drivers");
-    Console.WriteLine("  3. Run: TransformerEnvironment.InstallCudaPyTorch()");
+    Console.WriteLine("  3. Installing CUDA PyTorch...");
+
+    try
+    {
+        TransformerEnvironment.InstallCudaPyTorch();
+        Console.WriteLine("✅ CUDA PyTorch installation initiated");
+        Console.WriteLine("⚠️  Please restart the application after installation completes");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Failed to install CUDA PyTorch: {ex.Message}");
+        Console.WriteLine("   You may need to install manually - see installation instructions above");
+    }
 }
 Console.WriteLine();
 
@@ -142,7 +154,7 @@ if (gpuResults.Count > 0)
 {
     var totalDiff = totalCpuTime - totalGpuTime;
     var overallFaster = totalDiff > 0 ? "GPU" : "CPU";
-    
+
     Console.WriteLine($"Total GPU Time: {totalGpuTime:F2} seconds");
     Console.WriteLine($"Total Difference: {Math.Abs(totalDiff):F2} seconds");
     Console.WriteLine($"Overall Winner: {overallFaster} was faster by {Math.Abs(totalDiff):F2} seconds");
@@ -169,7 +181,7 @@ Console.WriteLine("=== System Information ===");
 try
 {
     var systemInfo = TransformerEnvironment.GetDetailedSystemInfo();
-    
+
     // Display System Information
     if (systemInfo.ContainsKey("system") && systemInfo["system"] is Dictionary<string, object> sysInfo)
     {
@@ -180,12 +192,12 @@ try
         if (sysInfo.ContainsKey("dotnet_version")) Console.WriteLine($".NET Version: {sysInfo["dotnet_version"]}");
         Console.WriteLine();
     }
-    
+
     // Display CUDA Information
     if (systemInfo.ContainsKey("cuda") && systemInfo["cuda"] is Dictionary<string, object> cudaInfo)
     {
         Console.WriteLine("--- CUDA Information ---");
-        if (cudaInfo.ContainsKey("available")) 
+        if (cudaInfo.ContainsKey("available"))
         {
             bool available = Convert.ToBoolean(cudaInfo["available"]);
             Console.WriteLine($"CUDA Available: {(available ? "✅ Yes" : "❌ No")}");
@@ -193,7 +205,7 @@ try
         if (cudaInfo.ContainsKey("description")) Console.WriteLine($"Status: {cudaInfo["description"]}");
         Console.WriteLine();
     }
-    
+
     // Display Memory Information
     if (systemInfo.ContainsKey("memory") && systemInfo["memory"] is Dictionary<string, object> memInfo)
     {
@@ -201,7 +213,7 @@ try
         if (memInfo.ContainsKey("working_set_mb")) Console.WriteLine($"Working Set: {memInfo["working_set_mb"]} MB");
         Console.WriteLine();
     }
-    
+
     // Display test execution summary
     Console.WriteLine("--- Test Execution Summary ---");
     Console.WriteLine($"CPU Tests Completed: {cpuResults.Count}/{samplePrompts.Length}");
@@ -215,7 +227,7 @@ try
     {
         var avgGpuTime = gpuResults.Average(r => r.TimeTakenSeconds);
         Console.WriteLine($"Average GPU Time per Image: {avgGpuTime:F2} seconds");
-        
+
         if (cpuResults.Count > 0)
         {
             var avgCpuTime = cpuResults.Average(r => r.TimeTakenSeconds);
