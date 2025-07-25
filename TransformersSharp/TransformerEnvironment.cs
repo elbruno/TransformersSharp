@@ -194,7 +194,7 @@ if __name__ == '__main__':
                     {"cuda_available", cudaAvailable},
                     {"cuda_device_count", 0}
                 };
-                
+
                 if (cudaAvailable)
                 {
                     // Try to get additional info if CUDA is available
@@ -209,7 +209,7 @@ if __name__ == '__main__':
                         // Ignore errors getting additional info
                     }
                 }
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -233,7 +233,7 @@ if __name__ == '__main__':
                 // For now, let's create a simplified version that doesn't rely on complex Python object conversion
                 // We can enhance this later once we understand the conversion patterns better
                 var systemInfo = new Dictionary<string, object>();
-                
+
                 // Add basic system info that we can gather from .NET
                 systemInfo["system"] = new Dictionary<string, object>
                 {
@@ -242,7 +242,7 @@ if __name__ == '__main__':
                     {"processor_count", Environment.ProcessorCount},
                     {"dotnet_version", Environment.Version.ToString()}
                 };
-                
+
                 // Add CUDA info
                 bool cudaAvailable = IsCudaAvailable();
                 systemInfo["cuda"] = new Dictionary<string, object>
@@ -250,13 +250,13 @@ if __name__ == '__main__':
                     {"available", cudaAvailable},
                     {"description", cudaAvailable ? "CUDA is available for GPU acceleration" : "CUDA not available - using CPU only"}
                 };
-                
+
                 // Add basic memory info
                 systemInfo["memory"] = new Dictionary<string, object>
                 {
                     {"working_set_mb", Math.Round(Environment.WorkingSet / (1024.0 * 1024.0), 2)}
                 };
-                
+
                 return systemInfo;
             }
             catch (Exception ex)
