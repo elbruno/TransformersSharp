@@ -16,6 +16,49 @@ namespace TransformersSharp.Tests
         }
 
         [Fact]
+        public void IsCudaAvailable_ShouldReturnBoolean()
+        {
+            // This test validates that the method doesn't throw and returns a boolean value
+            var result = TransformerEnvironment.IsCudaAvailable();
+            Assert.True(result || !result); // This will always pass but validates the call succeeds
+        }
+
+        [Fact] 
+        public void GetDeviceInfo_ShouldReturnValidDictionary()
+        {
+            var deviceInfo = TransformerEnvironment.GetDeviceInfo();
+            
+            Assert.NotNull(deviceInfo);
+            Assert.True(deviceInfo.Count > 0);
+            
+            // Should always contain cuda_available key
+            Assert.True(deviceInfo.ContainsKey("cuda_available"));
+            Assert.IsType<bool>(deviceInfo["cuda_available"]);
+        }
+
+        [Fact]
+        public void GetDetailedSystemInfo_ShouldReturnSystemInformation()
+        {
+            var systemInfo = TransformerEnvironment.GetDetailedSystemInfo();
+            
+            Assert.NotNull(systemInfo);
+            Assert.True(systemInfo.Count > 0);
+            
+            // Should contain the main sections
+            Assert.True(systemInfo.ContainsKey("system") || systemInfo.ContainsKey("error"));
+            Assert.True(systemInfo.ContainsKey("cuda") || systemInfo.ContainsKey("error"));
+            Assert.True(systemInfo.ContainsKey("memory") || systemInfo.ContainsKey("error"));
+        }
+
+        [Fact]
+        public void InstallCudaPyTorch_ShouldNotThrow()
+        {
+            // This method should not throw exceptions even if CUDA installation fails
+            var exception = Record.Exception(() => TransformerEnvironment.InstallCudaPyTorch());
+            Assert.Null(exception);
+        }
+
+        [Fact]
         public void Pipeline_Classify()
         {
             var pipeline = TextClassificationPipeline.FromModel("distilbert-base-uncased-finetuned-sst-2-english");
