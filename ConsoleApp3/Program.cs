@@ -2,7 +2,8 @@
 using TransformersSharp.Pipelines;
 
 //var model = "kandinsky-community/kandinsky-2-2-decoder";
-var model = "sd-legacy/stable-diffusion-v1-5";
+//var model = "sd-legacy/stable-diffusion-v1-5";
+var model = "stabilityai/stable-diffusion-2-1";
 
 var pipeline = TextToImagePipeline.FromModel(
     model: model,
