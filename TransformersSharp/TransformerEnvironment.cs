@@ -19,7 +19,6 @@ namespace TransformersSharp
                     .ConfigureServices(services =>
                     {
                         // Configure detailed logging
-
                         services.AddLogging(loggingBuilder =>
                         {
                             loggingBuilder.AddConsole();
@@ -32,11 +31,7 @@ namespace TransformersSharp
 
                         // If user has an environment variable TRANSFORMERS_SHARP_VENV_PATH, use that instead
                         string? envPath = Environment.GetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH");
-                        string venvPath;
-                        if (envPath != null)
-                            venvPath = envPath;
-                        else
-                            venvPath = Path.Join(appDataPath, "venv");
+                        string venvPath = envPath ?? Path.Join(appDataPath, "venv");
 
                         // Create the directory if it doesn't exist
                         if (!Directory.Exists(appDataPath))
@@ -47,8 +42,6 @@ namespace TransformersSharp
 
                         // Write requirements to appDataPath
                         string requirementsPath = Path.Join(appDataPath, "requirements.txt");
-
-                        // TODO: Make this configurable
                         string[] requirements =
                         {
                             "transformers",
@@ -67,7 +60,6 @@ namespace TransformersSharp
                             "scipy",
                             "numpy"
                         };
-
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));
 
                         // Create a separate script to install CUDA PyTorch
@@ -75,34 +67,46 @@ namespace TransformersSharp
                         string cudaInstallScript = @"
 import subprocess
 import sys
+import shutil
 
-def install_cuda_pytorch():
-    try:
-        # Try to install CUDA version of PyTorch
-        subprocess.check_call([
-            sys.executable, '-m', 'pip', 'install', 
-            'torch', 'torchvision', 'torchaudio', 
-            '--index-url', 'https://download.pytorch.org/whl/cu121',
-            '--force-reinstall'
-        ])
-        print('CUDA PyTorch installed successfully')
-        return True
-    except subprocess.CalledProcessError:
-        print('Failed to install CUDA PyTorch, keeping CPU version')
-        return False
+def main():
+    python_version = f'{sys.version_info.major}.{sys.version_info.minor}'
+    print(f'Current Python version: {python_version}')
+    
+    if python_version not in ['3.10', '3.11']:
+        print(f'WARNING: Python {python_version} has limited CUDA PyTorch support.')
+        print('For full CUDA support, install Python 3.10 or 3.11 separately and create a new venv.')
+        print('Attempting to install CPU-only PyTorch...')
+        try:
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
+            print('CPU-only PyTorch installed successfully.')
+        except subprocess.CalledProcessError as e:
+            print(f'Failed to install PyTorch: {e}')
+            sys.exit(1)
+    else:
+        print(f'Python {python_version} detected - installing CUDA PyTorch...')
+        try:
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cu121'])
+            print('CUDA PyTorch installed successfully.')
+        except subprocess.CalledProcessError as e:
+            print(f'CUDA PyTorch installation failed: {e}')
+            print('Falling back to CPU-only version...')
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
+            print('CPU-only PyTorch installed successfully.')
 
 if __name__ == '__main__':
-    install_cuda_pytorch()
+    main()
 ";
                         File.WriteAllText(installCudaScript, cudaInstallScript);
 
+                        // Use Python 3.12 for now (CUDA support limited to CPU-only packages)
+                        // Future: Switch to Python 3.10/3.11 when CSnakes properly supports them
                         services
-                                .WithPython()
-                                .WithHome(appDataPath)
-                                .WithVirtualEnvironment(venvPath)
-                                .WithUvInstaller()
-                                .FromRedistributable(); // Download Python 3.12 and store it locally
-
+                            .WithPython()
+                            .WithHome(appDataPath)
+                            .WithVirtualEnvironment(venvPath)
+                            .WithUvInstaller()
+                            .FromRedistributable(); // Use default Python 3.12
                     });
 
                 var app = builder.Build();
