@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/1 TransformersSharp/">
+    <Project Path="../TransformersSharp/TransformersSharp.csproj" />
+  </Folder>
+  <Folder Name="/2 Environment Test/">
+    <Project Path="TransformersSharp.EnvironmentTest/TransformersSharp.EnvironmentTest.csproj" />
+  </Folder>
+  <Folder Name="/3 Console Demos/">
+    <Project Path="ConsoleApp1/ConsoleApp1.csproj" />
+    <Project Path="ConsoleApp2/ConsoleApp2.csproj" />
+    <Project Path="ConsoleApp3/ConsoleApp3.csproj" />
+    <Project Path="ConsoleApp4/ConsoleApp4.csproj" />
+  </Folder>
+</Solution>
