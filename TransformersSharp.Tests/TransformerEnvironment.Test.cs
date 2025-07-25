@@ -51,10 +51,10 @@ namespace TransformersSharp.Tests
         }
 
         [Fact]
-        public void InstallCudaPyTorch_ShouldNotThrow()
+        public void InstallPyTorch_ShouldNotThrow()
         {
             // This method should not throw exceptions even if CUDA installation fails
-            var exception = Record.Exception(() => TransformerEnvironment.InstallCudaPyTorch());
+            var exception = Record.Exception(() => TransformerEnvironment.InstallPyTorch());
             Assert.Null(exception);
         }
 
