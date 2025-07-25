@@ -90,7 +90,7 @@ Console.WriteLine($"Generated {result.Width}x{result.Height} image");
 The `ImageGenerator` class provides a high-level interface with automatic pipeline management:
 
 ```csharp
-using ConsoleApp4;
+using DemoConsole.ConsoleApp4;
 
 // Create generator with custom settings
 var settings = new ImageGenerator.ImageGenerationSettings

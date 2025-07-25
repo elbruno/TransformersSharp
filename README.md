@@ -20,8 +20,8 @@ This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes)
 2. Clone this repository
 3. Run any of the console applications:
    ```bash
-   dotnet run --project ConsoleApp3  # Text-to-image generation
-   dotnet run --project ConsoleApp4  # Comprehensive testing
+   dotnet run --project DemoConsole/ConsoleApp3  # Text-to-image generation
+   dotnet run --project DemoConsole/ConsoleApp4  # Comprehensive testing
    ```
 
 [Full Documentation](https://tonybaloney.github.io/TransformersSharp/)

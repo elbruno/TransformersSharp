@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TransformersSharp\TransformersSharp.csproj" />
+    <ProjectReference Include="..\..\TransformersSharp\TransformersSharp.csproj" />
   </ItemGroup>
 
 </Project>
