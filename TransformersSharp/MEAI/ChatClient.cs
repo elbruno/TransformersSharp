@@ -1,11 +1,12 @@
 ﻿using Microsoft.Extensions.AI;
 using TransformersSharp.Pipelines;
+using System.Runtime.CompilerServices;
 
 namespace TransformersSharp.MEAI;
 
 public class TextGenerationPipelineChatClient : IChatClient
 {
-    public TextGenerationPipeline TextGenerationPipeline { get; private set; }
+    public TextGenerationPipeline? TextGenerationPipeline { get; private set; }
 
     public static TextGenerationPipelineChatClient FromModel(string model, TorchDtype? torchDtype = null, string? device = null, bool trustRemoteCode = false)
     {
@@ -48,7 +49,7 @@ public class TextGenerationPipelineChatClient : IChatClient
         serviceType == typeof(TextGenerationPipeline) ? this.TextGenerationPipeline :
         null;
 
-    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var response = await GetResponseAsync(messages, options, cancellationToken).ConfigureAwait(false);
         foreach (var update in response.ToChatResponseUpdates())

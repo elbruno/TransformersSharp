@@ -319,7 +319,7 @@ if __name__ == '__main__':
             try
             {
                 var wrapperModule = Env.TransformersWrapper();
-                return wrapperModule.IsCudaAvailable();
+                return wrapperModule.IsCudaAvailableWrapper();
             }
             catch (Exception)
             {

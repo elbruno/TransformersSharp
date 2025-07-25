@@ -154,6 +154,15 @@ def validate_text_to_image_model(model: str) -> Dict[str, Any]:
 
 
 # ==============================================================================
+# C# Interop Functions for Device Management  
+# ==============================================================================
+
+def is_cuda_available_wrapper() -> bool:
+    """Check if CUDA is available (wrapper for C# interop)."""
+    return is_cuda_available()
+
+
+# ==============================================================================
 # C# Interop Functions for Model Support
 # ==============================================================================
 
