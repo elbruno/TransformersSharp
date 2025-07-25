@@ -46,6 +46,22 @@ input_ids = tokenizer("How many helicopters can a human eat in one sitting?", re
 print(input_ids.tolist())
 ```
 
+## Architecture
+
+TransformersSharp pipelines are built on a modular Python architecture that provides:
+
+### Core Components
+- **Pipeline Management**: Main wrapper in `transformers_wrapper.py` handles model loading and execution
+- **Device Management**: Dedicated `device_manager.py` module for CUDA/CPU detection and optimization  
+- **System Information**: Specialized `system_info.py` module for performance monitoring
+- **Image Processing**: Separate `image_utils.py` module for image conversion and interop
+
+### Benefits
+- **Separation of Concerns**: Each module has a specific responsibility
+- **Better Maintainability**: Easier to locate and modify functionality
+- **Independent Testing**: Each component can be validated separately
+- **Performance Optimization**: Device-specific optimizations are centralized
+
 ## Device Management
 
 The `Pipeline` class automatically detects the device (CPU or GPU) being used by the underlying model. This information is accessible through the `DeviceType` property.

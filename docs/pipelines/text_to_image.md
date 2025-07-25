@@ -31,6 +31,17 @@ TransformersSharp automatically detects and configures the appropriate pipeline 
 - **Image Size**: 64x64 to 1024x1024 pixels
 - **Note**: Requires acceptance of license terms on HuggingFace
 
+## Architecture
+
+The Text-to-Image pipeline is built on TransformersSharp's modular Python architecture:
+
+- **Core Pipeline**: Implemented in `transformers_wrapper.py` for model management and generation
+- **Device Management**: Handled by `device_manager.py` for CUDA/CPU optimization
+- **Image Processing**: Managed by `image_utils.py` for format conversion and C# interop
+- **System Information**: Provided by `system_info.py` for performance analysis
+
+This modular design ensures better maintainability and allows for independent optimization of each component.
+
 ## Basic Usage
 
 ### Simple Image Generation
