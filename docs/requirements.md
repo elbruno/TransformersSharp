@@ -60,13 +60,13 @@ In addition to .NET 9.0, TransformersSharp requires:
 
 ## Console Applications
 
-All console applications (ConsoleApp1, ConsoleApp2, ConsoleApp3, ConsoleApp4, TransformersSharp.EnvironmentTest) require .NET 9.0:
+All console applications (located in the `DemoConsole/` folder) require .NET 9.0:
 
-- **Console1**: Text generation pipeline example
-- **Console2**: Microsoft.Extensions.AI chat client example  
-- **Console3**: Text-to-image generation example
-- **Console4**: Comprehensive performance testing and diagnostics
-- **EnvironmentTest**: Environment validation and CUDA installation testing
+- **DemoConsole/ConsoleApp1**: Text generation pipeline example
+- **DemoConsole/ConsoleApp2**: Microsoft.Extensions.AI chat client example  
+- **DemoConsole/ConsoleApp3**: Text-to-image generation example
+- **DemoConsole/ConsoleApp4**: Comprehensive performance testing and diagnostics
+- **DemoConsole/TransformersSharp.EnvironmentTest**: Environment validation and CUDA installation testing
 
 ## Troubleshooting
 
@@ -84,7 +84,7 @@ If you're restricted to .NET 8.0, you would need to:
 
 ### Getting Help
 
-- Check Console4 for comprehensive diagnostics
-- Run TransformersSharp.EnvironmentTest for environment validation
+- Check DemoConsole/ConsoleApp4 for comprehensive diagnostics
+- Run DemoConsole/TransformersSharp.EnvironmentTest for environment validation
 - Review error messages for specific guidance
 - See the troubleshooting sections in each console application
