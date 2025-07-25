@@ -5,7 +5,7 @@ using TransformersSharp.Pipelines;
 namespace ConsoleApp4;
 
 /// <summary>
-/// Image generator that creates images from text prompts using text-to-image pipelines.
+/// High-performance image generator for text-to-image generation with optimized pipeline management.
 /// </summary>
 public class ImageGenerator : IDisposable
 {
@@ -13,19 +13,45 @@ public class ImageGenerator : IDisposable
     private bool _disposed = false;
     private readonly string _model;
     private readonly string _device;
+    private readonly ImageGenerationSettings _settings;
+
+    /// <summary>
+    /// Configuration settings for image generation.
+    /// </summary>
+    public class ImageGenerationSettings
+    {
+        public int NumInferenceSteps { get; set; } = 10;
+        public float GuidanceScale { get; set; } = 7.5f;
+        public int Height { get; set; } = 256;
+        public int Width { get; set; } = 256;
+        public string OutputFolder { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TransformersSharpImages");
+    }
 
     /// <summary>
     /// Initializes a new instance of the ImageGenerator class.
     /// </summary>
-    /// <param name="model">The model identifier (e.g., "kandinsky-community/kandinsky-2-2-decoder")</param>
-    /// <param name="device">The device to run the model on (e.g., "cpu", "cuda")</param>
-    public ImageGenerator(string model = "stabilityai/stable-diffusion-2-1-base", string device = "cpu")
+    /// <param name="model">The model identifier</param>
+    /// <param name="device">The device to run the model on</param>
+    /// <param name="settings">Optional generation settings</param>
+    public ImageGenerator(
+        string model = "stabilityai/stable-diffusion-2-1-base", 
+        string device = "cpu", 
+        ImageGenerationSettings? settings = null)
     {
         _model = model;
         _device = device;
+        _settings = settings ?? new ImageGenerationSettings();
         
-        // Check CUDA availability and provide user feedback
-        if (device.ToLower() == "cuda" && !TransformerEnvironment.IsCudaAvailable())
+        ValidateDeviceAndProvideGuidance();
+        CreatePipeline();
+    }
+
+    /// <summary>
+    /// Validates device availability and provides user guidance.
+    /// </summary>
+    private void ValidateDeviceAndProvideGuidance()
+    {
+        if (_device.ToLower() == "cuda" && !TransformerEnvironment.IsCudaAvailable())
         {
             Console.WriteLine($"⚠️  CUDA requested but not available. Using CPU instead.");
             Console.WriteLine("   To enable GPU acceleration, ensure you have:");
@@ -34,43 +60,51 @@ public class ImageGenerator : IDisposable
             Console.WriteLine("   - CUDA-enabled PyTorch (run TransformerEnvironment.InstallCudaPyTorch())");
             Console.WriteLine();
         }
-        
-        CreatePipeline();
     }
 
     /// <summary>
-    /// Creates a fresh pipeline instance, disposing any existing pipeline objects.
-    /// This ensures no reuse of in-memory pipeline objects while preserving downloaded model files.
+    /// Creates a fresh pipeline instance with proper resource management.
     /// </summary>
     private void CreatePipeline()
     {
-        // Dispose existing pipeline if it exists
-        if (_pipeline is IDisposable disposablePipeline)
-        {
-            disposablePipeline.Dispose();
-        }
-        _pipeline = null;
-
-        // Force garbage collection to ensure Python objects are released
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-
+        DisposePipeline();
+        
         try
         {
-            // Create new pipeline instance with silent device fallback
             _pipeline = TextToImagePipeline.FromModel(
                 model: _model,
                 device: _device,
                 silentDeviceFallback: true);
         }
-        catch (Exception ex) when (ex.Message.Contains("DLL load failed") || 
-                                  ex.Message.Contains("diffusers") || 
-                                  ex.Message.Contains("_C") ||
-                                  ex.Message.Contains("xFormers") ||
-                                  ex.Message.Contains("package compatibility"))
+        catch (Exception ex) when (IsCompatibilityError(ex))
         {
-            // Handle diffusers/PyTorch compatibility issues
-            throw new InvalidOperationException($@"
+            throw new InvalidOperationException(CreateCompatibilityErrorMessage(ex), ex);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(CreateGeneralErrorMessage(ex), ex);
+        }
+    }
+
+    /// <summary>
+    /// Checks if the exception indicates a package compatibility issue.
+    /// </summary>
+    private static bool IsCompatibilityError(Exception ex)
+    {
+        var message = ex.Message;
+        return message.Contains("DLL load failed") || 
+               message.Contains("diffusers") || 
+               message.Contains("_C") ||
+               message.Contains("xFormers") ||
+               message.Contains("package compatibility");
+    }
+
+    /// <summary>
+    /// Creates a detailed error message for compatibility issues.
+    /// </summary>
+    private string CreateCompatibilityErrorMessage(Exception ex)
+    {
+        return $@"
 ❌ Text-to-image pipeline creation failed due to package compatibility issues.
 
 PROBLEM: The current PyTorch and diffusers installation has compatibility issues.
@@ -83,36 +117,26 @@ CURRENT SETUP ISSUES:
 {ex.Message}
 
 SOLUTIONS:
-
 🔧 Option 1 - Reinstall compatible packages (Recommended):
-1. Uninstall conflicting packages:
-   pip uninstall torch torchvision torchaudio diffusers xformers -y
-
-2. Install CPU-compatible versions:
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-   pip install diffusers --no-deps
-   pip install safetensors accelerate
-
-3. Restart your application
+1. pip uninstall torch torchvision torchaudio diffusers xformers -y
+2. pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+3. pip install diffusers --no-deps && pip install safetensors accelerate
+4. Restart your application
 
 🔧 Option 2 - Install CUDA version (if you have NVIDIA GPU):
 1. Ensure NVIDIA drivers are installed
 2. Run: TransformerEnvironment.InstallCudaPyTorch()
 3. Restart your application
 
-🔧 Option 3 - Use a different model:
-Try a lighter model that may have better compatibility:
-- stabilityai/stable-diffusion-2-1-base (current)
-- runwayml/stable-diffusion-v1-5
-- kandinsky-community/kandinsky-2-1
+For more help, see: https://pytorch.org/get-started/locally/";
+    }
 
-For more help, see: https://pytorch.org/get-started/locally/
-", ex);
-        }
-        catch (Exception ex)
-        {
-            // Handle other pipeline creation errors
-            throw new InvalidOperationException($@"
+    /// <summary>
+    /// Creates a detailed error message for general pipeline creation issues.
+    /// </summary>
+    private string CreateGeneralErrorMessage(Exception ex)
+    {
+        return $@"
 ❌ Failed to create text-to-image pipeline.
 
 ERROR: {ex.Message}
@@ -130,14 +154,27 @@ SOLUTIONS:
 4. Verify the model exists at: https://huggingface.co/{_model}
 
 If the problem persists, try using a well-known model like:
-'stabilityai/stable-diffusion-2-1-base' or 'runwayml/stable-diffusion-v1-5'
-", ex);
+'stabilityai/stable-diffusion-2-1-base' or 'runwayml/stable-diffusion-v1-5'";
+    }
+
+    /// <summary>
+    /// Disposes the current pipeline and forces garbage collection.
+    /// </summary>
+    private void DisposePipeline()
+    {
+        if (_pipeline is IDisposable disposablePipeline)
+        {
+            disposablePipeline.Dispose();
         }
+        _pipeline = null;
+        
+        // Force garbage collection to ensure Python objects are released
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
     }
 
     /// <summary>
     /// Refreshes the pipeline by disposing the current instance and creating a new one.
-    /// This ensures fresh pipeline objects without re-downloading the model files.
     /// </summary>
     public void RefreshPipeline()
     {
@@ -145,34 +182,34 @@ If the problem persists, try using a well-known model like:
         CreatePipeline();
     }
 
+    /// <summary>
+    /// Generates an image from the specified text prompt.
+    /// </summary>
+    /// <param name="prompt">The text prompt for image generation</param>
+    /// <param name="desiredFolder">Optional custom output folder</param>
+    /// <param name="refreshPipeline">Whether to refresh the pipeline before generation</param>
+    /// <returns>Image generation result with timing and file information</returns>
     public ImageGenerationResult GenerateImage(string prompt, string? desiredFolder = null, bool refreshPipeline = true)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(ImageGenerator));
 
-        // Refresh pipeline before generation to ensure fresh objects
         if (refreshPipeline)
         {
             RefreshPipeline();
         }
 
-        var folder = desiredFolder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TransformersSharpImages");
-        if (!Directory.Exists(folder))
-            Directory.CreateDirectory(folder);
-
+        EnsureOutputFolder(desiredFolder);
+        
         var stopwatch = Stopwatch.StartNew();
         var result = _pipeline!.Generate(
             prompt,
-            numInferenceSteps: 10,
-            guidanceScale: 7.5f,
-            height: 256,
-            width: 256);
-
+            numInferenceSteps: _settings.NumInferenceSteps,
+            guidanceScale: _settings.GuidanceScale,
+            height: _settings.Height,
+            width: _settings.Width);
         stopwatch.Stop();
 
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-        var filename = $"image_{_pipeline.DeviceType}_{timestamp}.png";
-        var filepath = Path.Combine(folder, filename);
-        File.WriteAllBytes(filepath, result.ImageBytes);
+        var filepath = SaveImageToFile(result.ImageBytes, desiredFolder);
 
         return new ImageGenerationResult
         {
@@ -183,15 +220,40 @@ If the problem persists, try using a well-known model like:
         };
     }
 
+    /// <summary>
+    /// Ensures the output folder exists.
+    /// </summary>
+    private void EnsureOutputFolder(string? desiredFolder)
+    {
+        var folder = desiredFolder ?? _settings.OutputFolder;
+        if (!Directory.Exists(folder))
+        {
+            Directory.CreateDirectory(folder);
+        }
+    }
+
+    /// <summary>
+    /// Saves the generated image to a file with a timestamped filename.
+    /// </summary>
+    private string SaveImageToFile(byte[] imageBytes, string? desiredFolder)
+    {
+        var folder = desiredFolder ?? _settings.OutputFolder;
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+        var filename = $"image_{_pipeline!.DeviceType}_{timestamp}.png";
+        var filepath = Path.Combine(folder, filename);
+        
+        File.WriteAllBytes(filepath, imageBytes);
+        return filepath;
+    }
+
+    /// <summary>
+    /// Disposes of the image generator and its resources.
+    /// </summary>
     public void Dispose()
     {
         if (!_disposed)
         {
-            if (_pipeline is IDisposable disposablePipeline)
-            {
-                disposablePipeline.Dispose();
-            }
-            _pipeline = null;
+            DisposePipeline();
             _disposed = true;
         }
     }

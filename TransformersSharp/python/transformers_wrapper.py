@@ -1,4 +1,17 @@
-﻿from typing import Any, Generator, Optional
+﻿"""
+TransformersSharp Python wrapper for machine learning pipelines and utilities.
+
+This module provides Python-side functionality for TransformersSharp, including:
+- Device detection and management (CUDA/CPU)
+- Pipeline creation and execution 
+- System information gathering
+- Package compatibility checking
+- Text-to-image generation
+- Speech recognition and text-to-audio
+- Image classification and object detection
+"""
+
+from typing import Any, Generator, Optional, Tuple, Dict, List
 from transformers import pipeline as TransformersPipeline, Pipeline, TextGenerationPipeline
 from huggingface_hub import login
 import torch
@@ -6,83 +19,42 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from collections.abc import Buffer
 from PIL import Image
 
+
+# ==============================================================================
+# Device Management and System Information
+# ==============================================================================
+
 def is_cuda_available() -> bool:
-    """
-    Check if CUDA is available for PyTorch.
-    """
+    """Check if CUDA is available for PyTorch."""
     return torch.cuda.is_available()
 
-def get_device_info() -> dict[str, Any]:
-    """
-    Get information about available devices.
-    """
+
+def get_device_info() -> Dict[str, Any]:
+    """Get information about available devices."""
+    cuda_available = torch.cuda.is_available()
     return {
-        "cuda_available": torch.cuda.is_available(),
-        "cuda_device_count": torch.cuda.device_count() if torch.cuda.is_available() else 0,
-        "current_device": torch.cuda.current_device() if torch.cuda.is_available() else None,
-        "device_name": torch.cuda.get_device_name() if torch.cuda.is_available() else None
+        "cuda_available": cuda_available,
+        "cuda_device_count": torch.cuda.device_count() if cuda_available else 0,
+        "current_device": torch.cuda.current_device() if cuda_available else None,
+        "device_name": torch.cuda.get_device_name() if cuda_available else None
     }
 
-def get_detailed_system_info() -> dict[str, Any]:
-    """
-    Get detailed information about CPU and GPU for performance analysis.
-    """
+
+def get_detailed_system_info() -> Dict[str, Any]:
+    """Get comprehensive system information for performance analysis."""
     import platform
     import psutil
-    import os
     
+    # Base system information
     info = {
-        # CPU Information
-        "cpu": {
-            "processor": platform.processor(),
-            "architecture": platform.architecture()[0],
-            "logical_cores": psutil.cpu_count(logical=True),
-            "physical_cores": psutil.cpu_count(logical=False),
-            "cpu_freq_current": round(psutil.cpu_freq().current, 2) if psutil.cpu_freq() else None,
-            "cpu_freq_max": round(psutil.cpu_freq().max, 2) if psutil.cpu_freq() else None,
-        },
-        # Memory Information
-        "memory": {
-            "total_gb": round(psutil.virtual_memory().total / (1024**3), 2),
-            "available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
-            "used_percent": psutil.virtual_memory().percent
-        },
-        # PyTorch Information
-        "pytorch": {
-            "version": torch.__version__,
-            "cuda_available": torch.cuda.is_available(),
-            "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
-            "cudnn_version": torch.backends.cudnn.version() if torch.cuda.is_available() and torch.backends.cudnn.is_available() else None
-        }
+        "cpu": _get_cpu_info(),
+        "memory": _get_memory_info(),
+        "pytorch": _get_pytorch_info()
     }
     
-    # GPU Information
+    # Add GPU information if available
     if torch.cuda.is_available():
-        gpu_info = {
-            "device_count": torch.cuda.device_count(),
-            "current_device": torch.cuda.current_device(),
-            "devices": []
-        }
-        
-        for i in range(torch.cuda.device_count()):
-            device_props = torch.cuda.get_device_properties(i)
-            memory_info = {
-                "total_memory_gb": round(device_props.total_memory / (1024**3), 2),
-                "allocated_memory_gb": round(torch.cuda.memory_allocated(i) / (1024**3), 2),
-                "cached_memory_gb": round(torch.cuda.memory_reserved(i) / (1024**3), 2)
-            }
-            
-            gpu_info["devices"].append({
-                "index": i,
-                "name": device_props.name,
-                "compute_capability": f"{device_props.major}.{device_props.minor}",
-                "total_memory_gb": memory_info["total_memory_gb"],
-                "multiprocessor_count": device_props.multi_processor_count,
-                "allocated_memory_gb": memory_info["allocated_memory_gb"],
-                "cached_memory_gb": memory_info["cached_memory_gb"]
-            })
-        
-        info["gpu"] = gpu_info
+        info["gpu"] = _get_gpu_info()
     else:
         info["gpu"] = {
             "device_count": 0,
@@ -92,14 +64,82 @@ def get_detailed_system_info() -> dict[str, Any]:
     
     return info
 
+
+def _get_cpu_info() -> Dict[str, Any]:
+    """Get CPU information."""
+    import platform
+    import psutil
+    
+    cpu_freq = psutil.cpu_freq()
+    return {
+        "processor": platform.processor(),
+        "architecture": platform.architecture()[0],
+        "logical_cores": psutil.cpu_count(logical=True),
+        "physical_cores": psutil.cpu_count(logical=False),
+        "cpu_freq_current": round(cpu_freq.current, 2) if cpu_freq else None,
+        "cpu_freq_max": round(cpu_freq.max, 2) if cpu_freq else None,
+    }
+
+
+def _get_memory_info() -> Dict[str, Any]:
+    """Get memory information."""
+    import psutil
+    
+    memory = psutil.virtual_memory()
+    return {
+        "total_gb": round(memory.total / (1024**3), 2),
+        "available_gb": round(memory.available / (1024**3), 2),
+        "used_percent": memory.percent
+    }
+
+
+def _get_pytorch_info() -> Dict[str, Any]:
+    """Get PyTorch information."""
+    return {
+        "version": torch.__version__,
+        "cuda_available": torch.cuda.is_available(),
+        "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
+        "cudnn_version": torch.backends.cudnn.version() if torch.cuda.is_available() and torch.backends.cudnn.is_available() else None
+    }
+
+
+def _get_gpu_info() -> Dict[str, Any]:
+    """Get GPU information."""
+    gpu_info = {
+        "device_count": torch.cuda.device_count(),
+        "current_device": torch.cuda.current_device(),
+        "devices": []
+    }
+    
+    for i in range(torch.cuda.device_count()):
+        device_props = torch.cuda.get_device_properties(i)
+        gpu_info["devices"].append({
+            "index": i,
+            "name": device_props.name,
+            "compute_capability": f"{device_props.major}.{device_props.minor}",
+            "total_memory_gb": round(device_props.total_memory / (1024**3), 2),
+            "multiprocessor_count": device_props.multi_processor_count,
+            "allocated_memory_gb": round(torch.cuda.memory_allocated(i) / (1024**3), 2),
+            "cached_memory_gb": round(torch.cuda.memory_reserved(i) / (1024**3), 2)
+        })
+    
+    return gpu_info
+
+
+# ==============================================================================
+# Device Validation and Pipeline Creation
+# ==============================================================================
+
 def validate_and_get_device(requested_device: Optional[str] = None, silent: bool = False) -> str:
     """
     Validate the requested device and return the best available device.
-    If CUDA is requested but not available, fall back to CPU with a warning.
     
     Args:
         requested_device: The requested device ('cuda', 'cpu', etc.)
         silent: If True, suppress warning messages for graceful fallback
+    
+    Returns:
+        The validated device string
     """
     if requested_device is None:
         return "cuda" if torch.cuda.is_available() else "cpu"
@@ -114,94 +154,95 @@ def validate_and_get_device(requested_device: Optional[str] = None, silent: bool
     
     return requested_device
 
-def check_text_to_image_compatibility() -> dict[str, Any]:
+
+# ==============================================================================
+# Package Compatibility Checking
+# ==============================================================================
+
+def check_text_to_image_compatibility() -> Dict[str, Any]:
     """
     Check if text-to-image pipelines can be created successfully.
     Returns detailed information about compatibility issues.
     """
     try:
-        # Check if diffusers can be imported and used
         from diffusers import AutoPipelineForText2Image
-        
-        # Get environment information
         import sys
-        pytorch_version = torch.__version__
-        python_version = sys.version.split()[0]
-        
-        # Check if CUDA is available
-        cuda_available = torch.cuda.is_available()
-        
-        # Try to determine if this is a CUDA vs CPU compatibility issue
-        is_cuda_pytorch = '+cu' in pytorch_version
         
         result = {
             "compatible": True,
             "can_create_pipeline": True,
-            "pytorch_version": pytorch_version,
-            "python_version": python_version,
-            "cuda_available": cuda_available,
-            "is_cuda_pytorch": is_cuda_pytorch,
+            "pytorch_version": torch.__version__,
+            "python_version": sys.version.split()[0],
+            "cuda_available": torch.cuda.is_available(),
+            "is_cuda_pytorch": '+cu' in torch.__version__,
             "message": "Text-to-image pipelines should work correctly"
         }
         
         return result
         
     except ImportError as e:
-        if "_C" in str(e) or "DLL load failed" in str(e):
-            return {
-                "compatible": False,
-                "can_create_pipeline": False,
-                "error_type": "dll_compatibility_error",
-                "pytorch_version": torch.__version__,
-                "python_version": sys.version.split()[0],
-                "cuda_available": torch.cuda.is_available(),
-                "is_cuda_pytorch": '+cu' in torch.__version__,
-                "message": "Diffusers cannot load C extensions - likely PyTorch/diffusers version incompatibility",
-                "error_details": str(e),
-                "recommended_action": "reinstall_compatible_packages"
-            }
-        else:
-            return {
-                "compatible": False,
-                "can_create_pipeline": False,
-                "error_type": "import_error",
-                "pytorch_version": torch.__version__,
-                "python_version": sys.version.split()[0],
-                "cuda_available": torch.cuda.is_available(),
-                "message": f"Cannot import diffusers: {str(e)}",
-                "error_details": str(e),
-                "recommended_action": "install_diffusers"
-            }
+        return _handle_import_error(e)
     except Exception as e:
-        return {
-            "compatible": False,
-            "can_create_pipeline": False,
-            "error_type": "unknown_error",
-            "pytorch_version": torch.__version__,
-            "python_version": sys.version.split()[0],
-            "cuda_available": torch.cuda.is_available(),
-            "message": f"Unknown error checking compatibility: {str(e)}",
-            "error_details": str(e),
-            "recommended_action": "check_installation"
-        }
+        return _handle_unknown_error(e)
 
-def check_package_compatibility():
+
+def _handle_import_error(error: ImportError) -> Dict[str, Any]:
+    """Handle import errors during compatibility check."""
+    import sys
+    
+    base_info = {
+        "compatible": False,
+        "can_create_pipeline": False,
+        "pytorch_version": torch.__version__,
+        "python_version": sys.version.split()[0],
+        "cuda_available": torch.cuda.is_available(),
+        "is_cuda_pytorch": '+cu' in torch.__version__,
+        "error_details": str(error)
+    }
+    
+    if "_C" in str(error) or "DLL load failed" in str(error):
+        base_info.update({
+            "error_type": "dll_compatibility_error",
+            "message": "Diffusers cannot load C extensions - likely PyTorch/diffusers version incompatibility",
+            "recommended_action": "reinstall_compatible_packages"
+        })
+    else:
+        base_info.update({
+            "error_type": "import_error",
+            "message": f"Cannot import diffusers: {str(error)}",
+            "recommended_action": "install_diffusers"
+        })
+    
+    return base_info
+
+
+def _handle_unknown_error(error: Exception) -> Dict[str, Any]:
+    """Handle unknown errors during compatibility check."""
+    import sys
+    
+    return {
+        "compatible": False,
+        "can_create_pipeline": False,
+        "error_type": "unknown_error",
+        "pytorch_version": torch.__version__,
+        "python_version": sys.version.split()[0],
+        "cuda_available": torch.cuda.is_available(),
+        "message": f"Unknown error checking compatibility: {str(error)}",
+        "error_details": str(error),
+        "recommended_action": "check_installation"
+    }
+
+
+def check_package_compatibility() -> Tuple[bool, Optional[str]]:
     """
     Check if the current PyTorch and diffusers installation is compatible.
-    Returns a tuple of (is_compatible, error_message)
+    
+    Returns:
+        Tuple of (is_compatible, error_message)
     """
     try:
-        # Check if diffusers can be imported and used
         from diffusers import AutoPipelineForText2Image
-        
-        # Try to instantiate a simple pipeline to test C extensions
-        # This will fail if there are DLL/compatibility issues
-        import tempfile
-        import os
-        
-        # Use a very small test - just check if we can access the class
-        pipeline_class = AutoPipelineForText2Image
-        
+        # Test basic import - if this succeeds, we're likely compatible
         return True, None
     except ImportError as e:
         if "_C" in str(e) or "DLL load failed" in str(e):
@@ -211,32 +252,86 @@ def check_package_compatibility():
     except Exception as e:
         return False, f"diffusers_unknown_error: {str(e)}"
 
-def pipeline(task: Optional[str] = None, model: Optional[str] = None, tokenizer: Optional[str] = None, torch_dtype: Optional[str] = None, device: Optional[str] = None, trust_remote_code: bool = False, silent_device_fallback: bool = False):
+# ==============================================================================
+# Pipeline Creation and Management
+# ==============================================================================
+
+def pipeline(
+    task: Optional[str] = None, 
+    model: Optional[str] = None, 
+    tokenizer: Optional[str] = None, 
+    torch_dtype: Optional[str] = None, 
+    device: Optional[str] = None, 
+    trust_remote_code: bool = False, 
+    silent_device_fallback: bool = False
+):
     """
     Create a pipeline for a specific task using the Hugging Face Transformers library.
+    
+    Args:
+        task: The task type (e.g., 'text-classification', 'text-to-image')
+        model: Model name or path
+        tokenizer: Tokenizer name or path  
+        torch_dtype: PyTorch data type as string
+        device: Target device ('cuda', 'cpu', etc.)
+        trust_remote_code: Whether to trust remote code
+        silent_device_fallback: Whether to suppress device fallback warnings
+        
+    Returns:
+        Configured pipeline object
     """
+    # Validate torch dtype
     if torch_dtype is not None:
         if not hasattr(torch, torch_dtype.lower()):
             raise ValueError(f"Unsupported torch_dtype: {torch_dtype}")
-        else:
-            torch_dtype = getattr(torch, torch_dtype.lower())
+        torch_dtype = getattr(torch, torch_dtype.lower())
     
     # Validate and get the best available device
     device = validate_and_get_device(device, silent=silent_device_fallback)
     
     # Handle text-to-image using diffusers
     if task == "text-to-image":
-        # Check package compatibility first
-        is_compatible, error_msg = check_package_compatibility()
-        
-        if not is_compatible:
-            if error_msg == "diffusers_dll_error":
-                # Provide specific guidance for DLL/compatibility issues
-                pytorch_version = torch.__version__
-                import sys
-                python_version = sys.version
-                
-                error_message = f"""
+        return _create_text_to_image_pipeline(model, torch_dtype, device)
+    
+    # Handle other tasks using transformers
+    return TransformersPipeline(
+        task=task, 
+        model=model, 
+        tokenizer=tokenizer, 
+        torch_dtype=torch_dtype, 
+        device=device, 
+        trust_remote_code=trust_remote_code
+    )
+
+
+def _create_text_to_image_pipeline(model: Optional[str], torch_dtype, device: str):
+    """Create a text-to-image pipeline with error handling."""
+    # Check package compatibility first
+    is_compatible, error_msg = check_package_compatibility()
+    
+    if not is_compatible:
+        if error_msg == "diffusers_dll_error":
+            raise RuntimeError(_create_dll_error_message())
+        else:
+            raise RuntimeError(f"Cannot create text-to-image pipeline: {error_msg}")
+    
+    try:
+        from diffusers import AutoPipelineForText2Image
+        return AutoPipelineForText2Image.from_pretrained(
+            model, 
+            torch_dtype=torch_dtype
+        ).to(device)
+    except Exception as e:
+        raise RuntimeError(_create_pipeline_error_message(str(e)))
+
+
+def _create_dll_error_message() -> str:
+    """Create detailed error message for DLL compatibility issues."""
+    pytorch_version = torch.__version__
+    import sys
+    python_version = sys.version
+    
+    return f"""
 Text-to-image pipeline creation failed due to package compatibility issues.
 
 ISSUE: Diffusers library cannot load required C extensions
@@ -245,7 +340,6 @@ CAUSE: Incompatible PyTorch and diffusers versions for your system
 Current Environment:
 - PyTorch: {pytorch_version}
 - Python: {python_version.split()[0]}
-- Device requested: {device}
 
 SOLUTION:
 1. Uninstall current packages:
@@ -268,21 +362,12 @@ This error commonly occurs when:
 - Python version mismatches with compiled packages
 - Missing Visual C++ Redistributables (Windows)
 """
-                raise RuntimeError(error_message)
-            else:
-                raise RuntimeError(f"Cannot create text-to-image pipeline: {error_msg}")
-        
-        try:
-            from diffusers import AutoPipelineForText2Image
-            # Remove trust_remote_code for diffusers pipelines to avoid warning
-            return AutoPipelineForText2Image.from_pretrained(
-                model, 
-                torch_dtype=torch_dtype
-            ).to(device)
-        except Exception as e:
-            # If we still get an error despite compatibility check, provide guidance
-            error_message = f"""
-Text-to-image pipeline creation failed: {str(e)}
+
+
+def _create_pipeline_error_message(error_str: str) -> str:
+    """Create error message for general pipeline creation failures."""
+    return f"""
+Text-to-image pipeline creation failed: {error_str}
 
 This may be due to:
 1. Model download issues - ensure internet connectivity
@@ -295,149 +380,208 @@ Try:
 3. Try a different model like 'runwayml/stable-diffusion-v1-5'
 4. Update diffusers: pip install --upgrade diffusers
 """
-            raise RuntimeError(error_message)
-    
-    # Only pass trust_remote_code for transformers pipelines
-    return TransformersPipeline(task=task, model=model, tokenizer=tokenizer, torch_dtype=torch_dtype, device=device, trust_remote_code=trust_remote_code)
 
 
-
-
-def invoke_text_generation_pipeline_with_template(pipeline: TextGenerationPipeline, 
-                             messages: list[dict[str, str]],
-                             max_length: Optional[int] = None,
-                             max_new_tokens: Optional[int] = None,
-                             min_length: Optional[int] = None,
-                             min_new_tokens: Optional[int] = None,
-                             stop_strings: Optional[list[str]] = None,
-                             temperature: Optional[float] = 1.0,
-                             top_k: Optional[int] = 50,
-                             top_p: Optional[float] = 1.0,
-                             min_p: Optional[float] = None,
-                            ) -> list[dict[str, str]]:
-    """
-    Invoke a text generation pipeline with a chat template.
-    Use pytorch for intermediate tensors (template -> generate)
-    """
-    # Apply template to messages
-    r = pipeline(messages, max_length=max_length, max_new_tokens=max_new_tokens, min_length=min_length, min_new_tokens=min_new_tokens, stop=stop_strings, temperature=temperature, top_k=top_k, top_p=top_p, min_p=min_p)
-    return r[0]['generated_text']
-
+# ==============================================================================
+# Authentication
+# ==============================================================================
 
 def huggingface_login(token: str) -> None:
+    """Login to Hugging Face with the provided token."""
     login(token=token)
 
 
-def call_pipeline(pipeline: Pipeline, input: str, **kwargs) -> list[dict[str, Any]]:
+# ==============================================================================
+# Pipeline Execution Functions
+# ==============================================================================
+
+def call_pipeline(pipeline: Pipeline, input: str, **kwargs) -> List[Dict[str, Any]]:
+    """Execute a pipeline with string input."""
     return pipeline(input, **kwargs)
 
 
-def call_pipeline_with_list(pipeline: Pipeline, input: list[str], **kwargs) -> list[dict[str, Any]]:
+def call_pipeline_with_list(pipeline: Pipeline, input: List[str], **kwargs) -> List[Dict[str, Any]]:
+    """Execute a pipeline with list input."""
     return pipeline(input, **kwargs)
 
 
-def tokenizer_from_pretrained(model: str, 
-                              cache_dir: Optional[str] = None, 
-                              force_download: bool = False, 
-                              revision: Optional[str] = 'main', 
-                              trust_remote_code: bool  = False) -> PreTrainedTokenizerBase:
-    return AutoTokenizer.from_pretrained(model, cache_dir=cache_dir, force_download=force_download, revision=revision, trust_remote_code=trust_remote_code)
-
-
-def tokenize_text_with_attention(tokenizer: PreTrainedTokenizerBase, text: str) -> tuple[list[int], list[int]]:
-    result = tokenizer(text)
-    return result['input_ids'], result['attention_mask']
-
-def tokenizer_text_as_ndarray(tokenizer: PreTrainedTokenizerBase, text: str, add_special_tokens: Optional[bool] = True) -> Buffer:
-    result = tokenizer(text, return_tensors='np', return_attention_mask=False, add_special_tokens=add_special_tokens)
-    return result['input_ids'][0]
-
-def tokenizer_text_with_offsets(tokenizer: PreTrainedTokenizerBase, text: str, add_special_tokens: Optional[bool] = True) -> tuple[Buffer, Buffer]:
-    result = tokenizer(text, return_tensors='np', return_offsets_mapping=True, return_attention_mask=False, add_special_tokens=add_special_tokens)
-    input_ids = result['input_ids']
-    offsets = result['offset_mapping']
-    return input_ids[0], offsets[0]
-
-def tokenizer_decode(tokenizer: PreTrainedTokenizerBase, input_ids: list[int], skip_special_tokens: bool = False,
-                     clean_up_tokenization_spaces: Optional[bool] = None) -> str:
-    decoded = tokenizer.decode(input_ids, skip_special_tokens=skip_special_tokens, clean_up_tokenization_spaces=clean_up_tokenization_spaces)
-    return decoded
-
-
-def stream_text_generation_pipeline_with_template(pipeline: TextGenerationPipeline, 
-                             messages: list[dict[str, str]],
-                             max_length: Optional[int] = None,
-                             max_new_tokens: Optional[int] = None,
-                             min_length: Optional[int] = None,
-                             min_new_tokens: Optional[int] = None,
-                             stop_strings: Optional[list[str]] = None,
-                             temperature: Optional[float] = 1.0,
-                             top_k: Optional[int] = 50,
-                             top_p: Optional[float] = 1.0,
-                             min_p: Optional[float] = None,
-                            ) -> Generator[dict[str, str], None, None]:
+def invoke_text_generation_pipeline_with_template(
+    pipeline: TextGenerationPipeline, 
+    messages: List[Dict[str, str]],
+    max_length: Optional[int] = None,
+    max_new_tokens: Optional[int] = None,
+    min_length: Optional[int] = None,
+    min_new_tokens: Optional[int] = None,
+    stop_strings: Optional[List[str]] = None,
+    temperature: Optional[float] = 1.0,
+    top_k: Optional[int] = 50,
+    top_p: Optional[float] = 1.0,
+    min_p: Optional[float] = None,
+) -> List[Dict[str, str]]:
     """
     Invoke a text generation pipeline with a chat template.
     Use pytorch for intermediate tensors (template -> generate)
     """
-    # Apply template to messages
-    r = pipeline(messages, max_length=max_length, max_new_tokens=max_new_tokens, min_length=min_length, 
-                 min_new_tokens=min_new_tokens, stop=stop_strings, temperature=temperature, top_k=top_k, 
-                 top_p=top_p, min_p=min_p)
+    result = pipeline(
+        messages, 
+        max_length=max_length, 
+        max_new_tokens=max_new_tokens, 
+        min_length=min_length, 
+        min_new_tokens=min_new_tokens, 
+        stop=stop_strings, 
+        temperature=temperature, 
+        top_k=top_k, 
+        top_p=top_p, 
+        min_p=min_p
+    )
+    return result[0]['generated_text']
 
-    # TODO : stream messages
-    for message in r[0]['generated_text']:
+
+def stream_text_generation_pipeline_with_template(
+    pipeline: TextGenerationPipeline, 
+    messages: List[Dict[str, str]],
+    max_length: Optional[int] = None,
+    max_new_tokens: Optional[int] = None,
+    min_length: Optional[int] = None,
+    min_new_tokens: Optional[int] = None,
+    stop_strings: Optional[List[str]] = None,
+    temperature: Optional[float] = 1.0,
+    top_k: Optional[int] = 50,
+    top_p: Optional[float] = 1.0,
+    min_p: Optional[float] = None,
+) -> Generator[Dict[str, str], None, None]:
+    """
+    Invoke a text generation pipeline with a chat template and stream results.
+    Use pytorch for intermediate tensors (template -> generate)
+    """
+    result = pipeline(
+        messages, 
+        max_length=max_length, 
+        max_new_tokens=max_new_tokens, 
+        min_length=min_length, 
+        min_new_tokens=min_new_tokens, 
+        stop=stop_strings, 
+        temperature=temperature, 
+        top_k=top_k, 
+        top_p=top_p, 
+        min_p=min_p
+    )
+    
+    # TODO: Implement actual streaming - for now yield all messages
+    for message in result[0]['generated_text']:
         yield message
 
 
-def invoke_image_classification_pipeline(pipeline: Pipeline, 
-                             image: str,
-                             function_to_apply: Optional[str] = None,
-                             top_k: Optional[int] = 5,
-                             timeout: Optional[float] = None) -> list[dict[str, Any]]:
-    """
-    Invoke an image classification pipeline.
-    """
-    r = pipeline(image, top_k=top_k, timeout=timeout, function_to_apply=function_to_apply)
-    return r
+# ==============================================================================
+# Tokenization Functions  
+# ==============================================================================
 
-def invoke_image_classification_from_bytes(pipeline: Pipeline, 
-                             data: bytes,
-                             width: int,
-                             height: int,
-                             pixel_mode: str,
-                             function_to_apply: Optional[str] = None,
-                             top_k: int = 5,
-                             timeout: Optional[float] = None) -> list[dict[str, Any]]:
-    """
-    Invoke an image classification pipeline.
-    """
+def tokenizer_from_pretrained(
+    model: str, 
+    cache_dir: Optional[str] = None, 
+    force_download: bool = False, 
+    revision: Optional[str] = 'main', 
+    trust_remote_code: bool = False
+) -> PreTrainedTokenizerBase:
+    """Load a pretrained tokenizer."""
+    return AutoTokenizer.from_pretrained(
+        model, 
+        cache_dir=cache_dir, 
+        force_download=force_download, 
+        revision=revision, 
+        trust_remote_code=trust_remote_code
+    )
+
+
+def tokenize_text_with_attention(tokenizer: PreTrainedTokenizerBase, text: str) -> Tuple[List[int], List[int]]:
+    """Tokenize text and return input IDs and attention mask."""
+    result = tokenizer(text)
+    return result['input_ids'], result['attention_mask']
+
+
+def tokenizer_text_as_ndarray(
+    tokenizer: PreTrainedTokenizerBase, 
+    text: str, 
+    add_special_tokens: Optional[bool] = True
+) -> Buffer:
+    """Tokenize text and return as numpy array."""
+    result = tokenizer(text, return_tensors='np', return_attention_mask=False, add_special_tokens=add_special_tokens)
+    return result['input_ids'][0]
+
+
+def tokenizer_text_with_offsets(
+    tokenizer: PreTrainedTokenizerBase, 
+    text: str, 
+    add_special_tokens: Optional[bool] = True
+) -> Tuple[Buffer, Buffer]:
+    """Tokenize text and return input IDs and offset mapping."""
+    result = tokenizer(text, return_tensors='np', return_offsets_mapping=True, return_attention_mask=False, add_special_tokens=add_special_tokens)
+    return result['input_ids'][0], result['offset_mapping'][0]
+
+
+def tokenizer_decode(
+    tokenizer: PreTrainedTokenizerBase, 
+    input_ids: List[int], 
+    skip_special_tokens: bool = False,
+    clean_up_tokenization_spaces: Optional[bool] = None
+) -> str:
+    """Decode token IDs back to text."""
+    return tokenizer.decode(input_ids, skip_special_tokens=skip_special_tokens, clean_up_tokenization_spaces=clean_up_tokenization_spaces)
+
+
+# ==============================================================================
+# Specialized Pipeline Functions
+# ==============================================================================
+
+def invoke_image_classification_pipeline(
+    pipeline: Pipeline, 
+    image: str,
+    function_to_apply: Optional[str] = None,
+    top_k: Optional[int] = 5,
+    timeout: Optional[float] = None
+) -> List[Dict[str, Any]]:
+    """Invoke an image classification pipeline."""
+    return pipeline(image, top_k=top_k, timeout=timeout, function_to_apply=function_to_apply)
+
+
+def invoke_image_classification_from_bytes(
+    pipeline: Pipeline, 
+    data: bytes,
+    width: int,
+    height: int,
+    pixel_mode: str,
+    function_to_apply: Optional[str] = None,
+    top_k: int = 5,
+    timeout: Optional[float] = None
+) -> List[Dict[str, Any]]:
+    """Invoke an image classification pipeline from raw bytes."""
     image = Image.frombytes(pixel_mode, (width, height), data)
-    r = pipeline(image, top_k=top_k, timeout=timeout, function_to_apply=function_to_apply)
-    return r
-
-def invoke_object_detection_pipeline(pipeline: Pipeline, 
-                             image: str,
-                             threshold: float = 0.5,
-                             timeout: Optional[float] = None) -> Generator[tuple[str, float, tuple[int, int, int, int]], None, None]:
-    """
-    Invoke an object detection pipeline.
-    """
-    return ((r["label"], r["score"], ((box := r["box"])["xmin"], box["ymin"], box["xmax"], box["ymax"]))
-            for r in pipeline(image, threshold=threshold, timeout=timeout))
+    return pipeline(image, top_k=top_k, timeout=timeout, function_to_apply=function_to_apply)
 
 
+def invoke_object_detection_pipeline(
+    pipeline: Pipeline, 
+    image: str,
+    threshold: float = 0.5,
+    timeout: Optional[float] = None
+) -> Generator[Tuple[str, float, Tuple[int, int, int, int]], None, None]:
+    """Invoke an object detection pipeline."""
+    results = pipeline(image, threshold=threshold, timeout=timeout)
+    for result in results:
+        box = result["box"]
+        yield (result["label"], result["score"], (box["xmin"], box["ymin"], box["xmax"], box["ymax"]))
 
-def invoke_text_to_audio_pipeline(pipeline: Pipeline, 
-                             text: str,
-                             generate_kwargs: Optional[dict[str, Any]] = None) -> tuple[Buffer, int]:
-    """
-    Invoke a text-to-audio pipeline.
-    """
+
+def invoke_text_to_audio_pipeline(
+    pipeline: Pipeline, 
+    text: str,
+    generate_kwargs: Optional[Dict[str, Any]] = None
+) -> Tuple[Buffer, int]:
+    """Invoke a text-to-audio pipeline."""
     if not generate_kwargs:
         generate_kwargs = {}
-    r = pipeline(text, **generate_kwargs)
-    return r['audio'], r['sampling_rate']
+    result = pipeline(text, **generate_kwargs)
+    return result['audio'], result['sampling_rate']
 
 
 def invoke_automatic_speech_recognition_pipeline(pipeline: Pipeline, audio: str) -> str:
@@ -450,8 +594,9 @@ def invoke_automatic_speech_recognition_pipeline(pipeline: Pipeline, audio: str)
     Returns:
         The text detected
     """
-    r = pipeline(audio, return_timestamps=False)
-    return r['text']
+    result = pipeline(audio, return_timestamps=False)
+    return result['text']
+
 
 def invoke_automatic_speech_recognition_pipeline_from_bytes(pipeline: Pipeline, audio: bytes) -> str:
     """
@@ -463,16 +608,18 @@ def invoke_automatic_speech_recognition_pipeline_from_bytes(pipeline: Pipeline, 
     Returns:
         The text detected
     """
-    r = pipeline(audio, return_timestamps=False)
-    return r['text']
+    result = pipeline(audio, return_timestamps=False)
+    return result['text']
 
 
-def invoke_text_to_image_pipeline(pipeline, 
-                                text: str,
-                                num_inference_steps: Optional[int] = 50,
-                                guidance_scale: Optional[float] = 7.5,
-                                height: Optional[int] = 512,
-                                width: Optional[int] = 512) -> Buffer:
+def invoke_text_to_image_pipeline(
+    pipeline, 
+    text: str,
+    num_inference_steps: Optional[int] = 50,
+    guidance_scale: Optional[float] = 7.5,
+    height: Optional[int] = 512,
+    width: Optional[int] = 512
+) -> Buffer:
     """
     Invoke a text-to-image pipeline.
     
@@ -486,13 +633,17 @@ def invoke_text_to_image_pipeline(pipeline,
     Returns:
         The generated image as bytes
     """
-    # For diffusers pipelines
-    if hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
-        # This is a diffusers pipeline
-        # Suppress FutureWarning about callback_steps deprecation
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=FutureWarning, message=".*callback_steps.*")
+    # Suppress FutureWarning about callback_steps deprecation
+    import warnings
+    from io import BytesIO
+    import numpy as np
+    
+    # Generate image based on pipeline type
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning, message=".*callback_steps.*")
+        
+        if hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
+            # This is a diffusers pipeline
             result = pipeline(
                 text, 
                 num_inference_steps=num_inference_steps,
@@ -500,48 +651,52 @@ def invoke_text_to_image_pipeline(pipeline,
                 height=height,
                 width=width
             )
-        # Diffusers returns a result with .images attribute
-        image = result.images[0]
-    else:
-        # This is a transformers pipeline
-        result = pipeline(text, 
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    height=height,
-                    width=width)
-        
-        # Get the generated image (it should be a PIL Image)
-        if hasattr(result, 'images') and len(result.images) > 0:
             image = result.images[0]
         else:
-            image = result
+            # This is a transformers pipeline
+            result = pipeline(
+                text, 
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                height=height,
+                width=width
+            )
+            
+            if hasattr(result, 'images') and len(result.images) > 0:
+                image = result.images[0]
+            else:
+                image = result
     
     # Convert PIL Image to bytes
+    return _convert_image_to_bytes(image)
+
+
+def _convert_image_to_bytes(image) -> bytes:
+    """Convert various image formats to PNG bytes."""
     from io import BytesIO
     import numpy as np
+    from PIL import Image as PILImage
     
-    # Convert PIL Image to numpy array and then to bytes
+    # Handle PIL Image
     if hasattr(image, 'save'):
-        # It's a PIL Image
         buffer = BytesIO()
         image.save(buffer, format='PNG')
         return buffer.getvalue()
-    else:
-        # It might already be a numpy array or tensor
-        if hasattr(image, 'numpy'):
-            image = image.numpy()
+    
+    # Handle numpy array or tensor
+    if hasattr(image, 'numpy'):
+        image = image.numpy()
+    
+    # Convert to uint8 if needed
+    if hasattr(image, 'dtype') and image.dtype != np.uint8:
+        image = (image * 255).astype(np.uint8)
         
-        # Convert to uint8 if needed
-        if image.dtype != np.uint8:
-            image = (image * 255).astype(np.uint8)
-            
-        # Convert numpy array to PIL Image and then to bytes
-        from PIL import Image as PILImage
-        if len(image.shape) == 3 and image.shape[2] == 3:  # RGB
-            pil_image = PILImage.fromarray(image, mode='RGB')
-        else:
-            pil_image = PILImage.fromarray(image)
-            
-        buffer = BytesIO()
-        pil_image.save(buffer, format='PNG')
-        return buffer.getvalue()
+    # Convert numpy array to PIL Image and then to bytes
+    if len(image.shape) == 3 and image.shape[2] == 3:  # RGB
+        pil_image = PILImage.fromarray(image, mode='RGB')
+    else:
+        pil_image = PILImage.fromarray(image)
+        
+    buffer = BytesIO()
+    pil_image.save(buffer, format='PNG')
+    return buffer.getvalue()
