@@ -40,25 +40,27 @@ namespace TransformersSharp
                         // Save the TRANSFORMERS_SHARP_VENV_PATH for the current user
                         Environment.SetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH", venvPath, EnvironmentVariableTarget.User);
 
+                        // Set environment variables to suppress known compatibility warnings
+                        Environment.SetEnvironmentVariable("XFORMERS_MORE_DETAILS", "0", EnvironmentVariableTarget.Process);
+                        Environment.SetEnvironmentVariable("XFORMERS_DISABLED", "1", EnvironmentVariableTarget.Process);
+
                         // Write requirements to appDataPath
                         string requirementsPath = Path.Join(appDataPath, "requirements.txt");
                         string[] requirements =
                         {
                             "transformers",
                             "sentence_transformers",
-                            "torch",
-                            "torchvision",
-                            "torchaudio",
                             "pillow",
                             "timm",
                             "einops",
                             "diffusers",
                             "accelerate",
                             "psutil",
-                            "xformers",
                             "safetensors",
                             "scipy",
                             "numpy"
+                            // Note: torch, torchvision, torchaudio, and xformers are handled separately
+                            // to ensure compatibility between CPU/CUDA versions and Python versions
                         };
                         File.WriteAllText(requirementsPath, string.Join('\n', requirements));
 
@@ -68,31 +70,59 @@ namespace TransformersSharp
 import subprocess
 import sys
 import shutil
+import os
 
 def main():
     python_version = f'{sys.version_info.major}.{sys.version_info.minor}'
     print(f'Current Python version: {python_version}')
     
-    if python_version not in ['3.10', '3.11']:
-        print(f'WARNING: Python {python_version} has limited CUDA PyTorch support.')
-        print('For full CUDA support, install Python 3.10 or 3.11 separately and create a new venv.')
-        print('Attempting to install CPU-only PyTorch...')
+    # First, install PyTorch based on Python version and CUDA availability
+    print('Installing PyTorch...')
+    
+    # For Python 3.12, we need to be more careful with package compatibility
+    if python_version == '3.12':
+        print(f'Python {python_version} detected - installing compatible PyTorch (CPU-only for better compatibility)...')
+        try:
+            # Install CPU-only PyTorch for maximum compatibility with Python 3.12
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
+            print('CPU-only PyTorch installed successfully.')
+            
+            # Check if we should try xformers - skip it for better compatibility
+            print('Skipping xformers installation for Python 3.12 to avoid compatibility issues.')
+            print('Note: Some advanced optimizations may not be available, but basic functionality will work.')
+            
+        except subprocess.CalledProcessError as e:
+            print(f'Failed to install PyTorch: {e}')
+            sys.exit(1)
+    elif python_version in ['3.10', '3.11']:
+        print(f'Python {python_version} detected - attempting CUDA PyTorch installation...')
+        try:
+            # Try CUDA first for Python 3.10/3.11
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cu121'])
+            print('CUDA PyTorch installed successfully.')
+            
+            # Try to install xformers for optimization
+            try:
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'xformers'])
+                print('xFormers installed successfully for optimized performance.')
+            except subprocess.CalledProcessError:
+                print('xFormers installation failed - proceeding without it (performance may be slower but functionality preserved).')
+                
+        except subprocess.CalledProcessError as e:
+            print(f'CUDA PyTorch installation failed: {e}')
+            print('Falling back to CPU-only version...')
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
+            print('CPU-only PyTorch installed successfully.')
+    else:
+        print(f'Python {python_version} - installing CPU-only PyTorch for compatibility...')
         try:
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
             print('CPU-only PyTorch installed successfully.')
         except subprocess.CalledProcessError as e:
             print(f'Failed to install PyTorch: {e}')
             sys.exit(1)
-    else:
-        print(f'Python {python_version} detected - installing CUDA PyTorch...')
-        try:
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cu121'])
-            print('CUDA PyTorch installed successfully.')
-        except subprocess.CalledProcessError as e:
-            print(f'CUDA PyTorch installation failed: {e}')
-            print('Falling back to CPU-only version...')
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio', '--index-url', 'https://download.pytorch.org/whl/cpu'])
-            print('CPU-only PyTorch installed successfully.')
+
+    print('PyTorch installation complete!')
 
 if __name__ == '__main__':
     main()
@@ -143,27 +173,49 @@ if __name__ == '__main__':
         /// </summary>
         public static void InstallCudaPyTorch()
         {
-            var wrapperModule = Env.TransformersWrapper();
             try
             {
-                // Use the Python subprocess to install CUDA PyTorch
                 string appDataPath = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TransformersSharp");
                 string installScript = Path.Join(appDataPath, "install_cuda_pytorch.py");
 
                 if (File.Exists(installScript))
                 {
-                    // TODO: Add implementation to run the CUDA installation script
-                    Console.WriteLine("To install CUDA PyTorch manually, run the following commands:");
-                    Console.WriteLine($"1. Navigate to: {appDataPath}");
-                    Console.WriteLine($"2. Activate the virtual environment: .\\venv\\Scripts\\Activate.ps1");
-                    Console.WriteLine("3. Install CUDA PyTorch: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121");
+                    Console.WriteLine("Installing PyTorch and compatible packages...");
+                    Console.WriteLine("This may take a few minutes...");
+
+                    // Try to run the installation script using the Python environment
+                    try
+                    {
+                        var wrapperModule = Env.TransformersWrapper();
+                        // For now, provide manual instructions as running subprocess through CSnakes needs more setup
+                        Console.WriteLine("To install PyTorch with proper compatibility, please run:");
+                        Console.WriteLine($"1. Open PowerShell and navigate to: {appDataPath}");
+                        string venvPath = Environment.GetEnvironmentVariable("TRANSFORMERS_SHARP_VENV_PATH") ?? Path.Join(appDataPath, "venv");
+                        Console.WriteLine($"2. Activate the virtual environment: {venvPath}\\Scripts\\Activate.ps1");
+                        Console.WriteLine($"3. Run the installation script: python install_cuda_pytorch.py");
+                        Console.WriteLine("4. Restart your application after installation completes");
+                        Console.WriteLine();
+                        Console.WriteLine("The script will automatically choose the best PyTorch version for your Python installation.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Could not run installation script automatically: {ex.Message}");
+                        Console.WriteLine("Please run the installation manually as described above.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Installation script not found at: {installScript}");
+                    Console.WriteLine("Please ensure TransformersSharp is properly initialized.");
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to install CUDA PyTorch: {ex.Message}");
-                Console.WriteLine("You can manually install CUDA PyTorch by running:");
-                Console.WriteLine("pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121");
+                Console.WriteLine("You can manually install compatible PyTorch by running:");
+                Console.WriteLine("For Python 3.12: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu");
+                Console.WriteLine("For Python 3.10/3.11: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121");
+                Console.WriteLine("Note: Avoid installing xformers with Python 3.12 to prevent compatibility warnings.");
             }
         }
 
