@@ -18,5 +18,11 @@ This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes)
 - [Image Classification Pipeline(`ImageClassificationPipeline`)](pipelines/image_classification.md)
 - [Object Detection Pipeline (`ObjectDetectionPipeline`)](pipelines/object_detection.md)
 - [Text to Audio Pipeline (`TextToAudioPipeline`)](pipelines/text_to_audio.md)
+- [Text to Image Pipeline (`TextToImagePipeline`)](pipelines/text_to_image.md)
 - [Automatic Speech Recognition (`AutomaticSpeechRecognitionPipeline`)](pipelines/auto_speech_recognition.md)
 - [Sentence Transformers (Embeddings)](sentence_transformers.md)
+
+## Architecture
+
+- [Python Module Architecture](python_modules.md) - Modular Python wrapper design
+- [CUDA Fix Summary](CUDA_FIX_SUMMARY.md) - Device compatibility and performance improvements

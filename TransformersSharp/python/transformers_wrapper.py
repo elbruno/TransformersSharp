@@ -1,14 +1,15 @@
-﻿"""
+"""
 TransformersSharp Python wrapper for machine learning pipelines and utilities.
 
 This module provides Python-side functionality for TransformersSharp, including:
-- Device detection and management (CUDA/CPU)
 - Pipeline creation and execution 
-- System information gathering
 - Package compatibility checking
 - Text-to-image generation
 - Speech recognition and text-to-audio
 - Image classification and object detection
+- Authentication and tokenization
+
+Device management, system information, and image utilities are provided by separate modules.
 """
 
 from typing import Any, Generator, Optional, Tuple, Dict, List
@@ -19,140 +20,10 @@ from transformers import AutoTokenizer, PreTrainedTokenizerBase
 from collections.abc import Buffer
 from PIL import Image
 
-
-# ==============================================================================
-# Device Management and System Information
-# ==============================================================================
-
-def is_cuda_available() -> bool:
-    """Check if CUDA is available for PyTorch."""
-    return torch.cuda.is_available()
-
-
-def get_device_info() -> Dict[str, Any]:
-    """Get information about available devices."""
-    cuda_available = torch.cuda.is_available()
-    return {
-        "cuda_available": cuda_available,
-        "cuda_device_count": torch.cuda.device_count() if cuda_available else 0,
-        "current_device": torch.cuda.current_device() if cuda_available else None,
-        "device_name": torch.cuda.get_device_name() if cuda_available else None
-    }
-
-
-def get_detailed_system_info() -> Dict[str, Any]:
-    """Get comprehensive system information for performance analysis."""
-    import platform
-    import psutil
-    
-    # Base system information
-    info = {
-        "cpu": _get_cpu_info(),
-        "memory": _get_memory_info(),
-        "pytorch": _get_pytorch_info()
-    }
-    
-    # Add GPU information if available
-    if torch.cuda.is_available():
-        info["gpu"] = _get_gpu_info()
-    else:
-        info["gpu"] = {
-            "device_count": 0,
-            "available": False,
-            "message": "CUDA not available"
-        }
-    
-    return info
-
-
-def _get_cpu_info() -> Dict[str, Any]:
-    """Get CPU information."""
-    import platform
-    import psutil
-    
-    cpu_freq = psutil.cpu_freq()
-    return {
-        "processor": platform.processor(),
-        "architecture": platform.architecture()[0],
-        "logical_cores": psutil.cpu_count(logical=True),
-        "physical_cores": psutil.cpu_count(logical=False),
-        "cpu_freq_current": round(cpu_freq.current, 2) if cpu_freq else None,
-        "cpu_freq_max": round(cpu_freq.max, 2) if cpu_freq else None,
-    }
-
-
-def _get_memory_info() -> Dict[str, Any]:
-    """Get memory information."""
-    import psutil
-    
-    memory = psutil.virtual_memory()
-    return {
-        "total_gb": round(memory.total / (1024**3), 2),
-        "available_gb": round(memory.available / (1024**3), 2),
-        "used_percent": memory.percent
-    }
-
-
-def _get_pytorch_info() -> Dict[str, Any]:
-    """Get PyTorch information."""
-    return {
-        "version": torch.__version__,
-        "cuda_available": torch.cuda.is_available(),
-        "cuda_version": torch.version.cuda if torch.cuda.is_available() else None,
-        "cudnn_version": torch.backends.cudnn.version() if torch.cuda.is_available() and torch.backends.cudnn.is_available() else None
-    }
-
-
-def _get_gpu_info() -> Dict[str, Any]:
-    """Get GPU information."""
-    gpu_info = {
-        "device_count": torch.cuda.device_count(),
-        "current_device": torch.cuda.current_device(),
-        "devices": []
-    }
-    
-    for i in range(torch.cuda.device_count()):
-        device_props = torch.cuda.get_device_properties(i)
-        gpu_info["devices"].append({
-            "index": i,
-            "name": device_props.name,
-            "compute_capability": f"{device_props.major}.{device_props.minor}",
-            "total_memory_gb": round(device_props.total_memory / (1024**3), 2),
-            "multiprocessor_count": device_props.multi_processor_count,
-            "allocated_memory_gb": round(torch.cuda.memory_allocated(i) / (1024**3), 2),
-            "cached_memory_gb": round(torch.cuda.memory_reserved(i) / (1024**3), 2)
-        })
-    
-    return gpu_info
-
-
-# ==============================================================================
-# Device Validation and Pipeline Creation
-# ==============================================================================
-
-def validate_and_get_device(requested_device: Optional[str] = None, silent: bool = False) -> str:
-    """
-    Validate the requested device and return the best available device.
-    
-    Args:
-        requested_device: The requested device ('cuda', 'cpu', etc.)
-        silent: If True, suppress warning messages for graceful fallback
-    
-    Returns:
-        The validated device string
-    """
-    if requested_device is None:
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    
-    if requested_device.lower() == "cuda":
-        if torch.cuda.is_available():
-            return "cuda"
-        else:
-            if not silent:
-                print("Warning: CUDA requested but not available. PyTorch was not compiled with CUDA support. Falling back to CPU.")
-            return "cpu"
-    
-    return requested_device
+# Import functionality from separate modules
+from device_manager import is_cuda_available, get_device_info, validate_and_get_device
+from system_info import get_detailed_system_info
+from image_utils import convert_image_to_bytes
 
 
 # ==============================================================================
@@ -909,35 +780,8 @@ def invoke_text_to_image_pipeline(
                 image = result
     
     # Convert PIL Image to bytes
-    return _convert_image_to_bytes(image)
+    return convert_image_to_bytes(image)
 
 
-def _convert_image_to_bytes(image) -> bytes:
-    """Convert various image formats to PNG bytes."""
-    from io import BytesIO
-    import numpy as np
-    from PIL import Image as PILImage
-    
-    # Handle PIL Image
-    if hasattr(image, 'save'):
-        buffer = BytesIO()
-        image.save(buffer, format='PNG')
-        return buffer.getvalue()
-    
-    # Handle numpy array or tensor
-    if hasattr(image, 'numpy'):
-        image = image.numpy()
-    
-    # Convert to uint8 if needed
-    if hasattr(image, 'dtype') and image.dtype != np.uint8:
-        image = (image * 255).astype(np.uint8)
-        
-    # Convert numpy array to PIL Image and then to bytes
-    if len(image.shape) == 3 and image.shape[2] == 3:  # RGB
-        pil_image = PILImage.fromarray(image, mode='RGB')
-    else:
-        pil_image = PILImage.fromarray(image)
-        
-    buffer = BytesIO()
-    pil_image.save(buffer, format='PNG')
-    return buffer.getvalue()
+# Note: _convert_image_to_bytes function has been moved to image_utils.py module
+# and is now imported as convert_image_to_bytes
