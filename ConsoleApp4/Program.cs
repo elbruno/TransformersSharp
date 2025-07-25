@@ -29,6 +29,17 @@ namespace ConsoleApp4
             
             var deviceInfo = PerformDeviceCapabilityCheck();
             
+            // Demonstrate enhanced model support (optional - comment out for performance testing only)
+            Console.WriteLine("Press 'M' to demonstrate model support, or any other key to skip to performance tests:");
+            var key = Console.ReadKey();
+            Console.WriteLine();
+            
+            if (key.Key == ConsoleKey.M)
+            {
+                ModelSupportExample.DemonstrateModelSupport();
+                Console.WriteLine();
+            }
+            
             PerformCpuTests();
             PerformGpuTests(deviceInfo.cudaAvailable);
             
@@ -47,7 +58,7 @@ namespace ConsoleApp4
             Console.WriteLine("=== Diagnostic Check ===");
             try
             {
-                var testModel = "stabilityai/stable-diffusion-2-1-base";
+                var testModel = "stable-diffusion-v1-5/stable-diffusion-v1-5";
                 Console.WriteLine($"Testing text-to-image pipeline compatibility...");
                 
                 using var testGenerator = new ImageGenerator(model: testModel, device: "cpu");

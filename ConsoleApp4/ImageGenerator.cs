@@ -34,7 +34,7 @@ public class ImageGenerator : IDisposable
     /// <param name="device">The device to run the model on</param>
     /// <param name="settings">Optional generation settings</param>
     public ImageGenerator(
-        string model = "stabilityai/stable-diffusion-2-1-base", 
+        string model = "stable-diffusion-v1-5/stable-diffusion-v1-5", 
         string device = "cpu", 
         ImageGenerationSettings? settings = null)
     {

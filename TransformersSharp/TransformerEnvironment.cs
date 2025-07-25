@@ -435,6 +435,43 @@ if __name__ == '__main__':
         }
 
         /// <summary>
+        /// Gets the default text-to-image model identifier.
+        /// </summary>
+        /// <returns>Default model identifier</returns>
+        public static string GetDefaultTextToImageModel()
+        {
+            return TransformersWrapper.GetDefaultTextToImageModel();
+        }
+
+        /// <summary>
+        /// Gets the pipeline class name for a specific text-to-image model.
+        /// </summary>
+        /// <param name="model">Model identifier</param>
+        /// <returns>Pipeline class name</returns>
+        public static string GetModelPipelineClassName(string model)
+        {
+            return TransformersWrapper.GetModelPipelineClassName(model);
+        }
+
+        /// <summary>
+        /// Gets recommended generation settings for a specific text-to-image model.
+        /// </summary>
+        /// <param name="model">Model identifier</param>
+        /// <returns>Dictionary with recommended settings</returns>
+        public static Dictionary<string, object> GetRecommendedSettingsForModel(string model)
+        {
+            var pythonDict = TransformersWrapper.GetRecommendedSettingsForModel(model);
+            
+            // Convert Python dict to C# Dictionary
+            var result = new Dictionary<string, object>();
+            foreach (var key in pythonDict.Keys)
+            {
+                result[key.ToString()] = pythonDict[key];
+            }
+            return result;
+        }
+
+        /// <summary>
         /// Disposes of the Python environment.
         /// </summary>
         public static void Dispose()

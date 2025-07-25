@@ -156,8 +156,208 @@ def validate_and_get_device(requested_device: Optional[str] = None, silent: bool
 
 
 # ==============================================================================
-# Package Compatibility Checking
+# Model Support and Validation
 # ==============================================================================
+
+def get_supported_text_to_image_models() -> List[Dict[str, Any]]:
+    """
+    Get list of supported text-to-image models with their configurations.
+    
+    Returns:
+        List of model dictionaries with metadata
+    """
+    return [
+        {
+            "model_id": "stable-diffusion-v1-5/stable-diffusion-v1-5",
+            "pipeline_class": "StableDiffusionPipeline",
+            "default": True,
+            "description": "General-purpose text-to-image generation with excellent balance",
+            "recommended_size": (512, 512),
+            "memory_requirements": "Low",
+            "speed": "Fast"
+        },
+        {
+            "model_id": "stabilityai/stable-diffusion-2-1",
+            "pipeline_class": "StableDiffusionPipeline", 
+            "default": False,
+            "description": "Improved image quality and better prompt adherence",
+            "recommended_size": (768, 768),
+            "memory_requirements": "Medium",
+            "speed": "Medium"
+        },
+        {
+            "model_id": "kandinsky-community/kandinsky-2-2-decoder",
+            "pipeline_class": "KandinskyV22Pipeline",
+            "default": False,
+            "description": "Artistic style generation with unique aesthetic",
+            "recommended_size": (512, 512),
+            "memory_requirements": "Medium",
+            "speed": "Medium"
+        },
+        {
+            "model_id": "DeepFloyd/IF-I-M-v1.0",
+            "pipeline_class": "IFPipeline",
+            "default": False,
+            "description": "High-resolution, photorealistic image generation",
+            "recommended_size": (1024, 1024),
+            "memory_requirements": "High",
+            "speed": "Slow",
+            "notes": "Requires HuggingFace token acceptance for some models"
+        }
+    ]
+
+
+def validate_text_to_image_model(model: str) -> Dict[str, Any]:
+    """
+    Validate if a model is supported and get its configuration.
+    
+    Args:
+        model: Model identifier to validate
+        
+    Returns:
+        Validation result with model information
+    """
+    supported_models = get_supported_text_to_image_models()
+    
+    # Check if model is in our supported list
+    for model_info in supported_models:
+        if model_info["model_id"] == model:
+            return {
+                "supported": True,
+                "model_info": model_info,
+                "pipeline_class": model_info["pipeline_class"],
+                "recommendations": {
+                    "size": model_info["recommended_size"],
+                    "memory": model_info["memory_requirements"],
+                    "speed": model_info["speed"]
+                }
+            }
+    
+    # Check if it's a variant or similar model
+    model_lower = model.lower()
+    if any(keyword in model_lower for keyword in ["stable-diffusion", "runwayml"]):
+        return {
+            "supported": True,
+            "model_info": {
+                "model_id": model,
+                "pipeline_class": "StableDiffusionPipeline",
+                "description": "Stable Diffusion variant (auto-detected)",
+                "recommended_size": (512, 512)
+            },
+            "pipeline_class": "StableDiffusionPipeline",
+            "note": "Auto-detected as Stable Diffusion variant"
+        }
+    elif "kandinsky" in model_lower:
+        return {
+            "supported": True,
+            "model_info": {
+                "model_id": model,
+                "pipeline_class": "KandinskyV22Pipeline", 
+                "description": "Kandinsky variant (auto-detected)",
+                "recommended_size": (512, 512)
+            },
+            "pipeline_class": "KandinskyV22Pipeline",
+            "note": "Auto-detected as Kandinsky variant"
+        }
+    elif "deepfloyd" in model_lower and "if" in model_lower:
+        return {
+            "supported": True,
+            "model_info": {
+                "model_id": model,
+                "pipeline_class": "IFPipeline",
+                "description": "DeepFloyd IF variant (auto-detected)",
+                "recommended_size": (1024, 1024)
+            },
+            "pipeline_class": "IFPipeline",
+            "note": "Auto-detected as DeepFloyd IF variant"
+        }
+    else:
+        return {
+            "supported": False,
+            "model_info": None,
+            "pipeline_class": "AutoPipelineForText2Image",
+            "note": f"Unknown model '{model}' - will attempt to use AutoPipelineForText2Image",
+            "recommendation": "Use one of the officially supported models for best results"
+        }
+
+
+
+# ==============================================================================
+# C# Interop Functions for Model Support
+# ==============================================================================
+
+def get_default_text_to_image_model() -> str:
+    """Get the default text-to-image model identifier."""
+    supported_models = get_supported_text_to_image_models()
+    for model in supported_models:
+        if model.get("default", False):
+            return model["model_id"]
+    return "stable-diffusion-v1-5/stable-diffusion-v1-5"  # Fallback
+
+
+def get_model_pipeline_class_name(model: str) -> str:
+    """Get the pipeline class name for a given model."""
+    validation_result = validate_text_to_image_model(model)
+    return validation_result["pipeline_class"]
+
+
+def get_recommended_settings_for_model(model: str) -> Dict[str, Any]:
+    """
+    Get recommended generation settings for a specific model.
+    
+    Returns:
+        Dictionary with recommended inference steps, guidance scale, and image dimensions
+    """
+    validation_result = validate_text_to_image_model(model)
+    
+    if validation_result["supported"] and validation_result.get("model_info"):
+        model_info = validation_result["model_info"]
+        recommended_size = model_info.get("recommended_size", (512, 512))
+        
+        # Model-specific recommendations
+        model_lower = model.lower()
+        if "stable-diffusion-v1-5" in model_lower:
+            return {
+                "num_inference_steps": 20,
+                "guidance_scale": 7.5,
+                "height": recommended_size[1],
+                "width": recommended_size[0],
+                "optimal_for": "balanced performance and quality"
+            }
+        elif "stable-diffusion-2" in model_lower:
+            return {
+                "num_inference_steps": 30,
+                "guidance_scale": 8.0,
+                "height": recommended_size[1],
+                "width": recommended_size[0],
+                "optimal_for": "high quality detailed images"
+            }
+        elif "kandinsky" in model_lower:
+            return {
+                "num_inference_steps": 25,
+                "guidance_scale": 7.0,
+                "height": recommended_size[1],
+                "width": recommended_size[0],
+                "optimal_for": "artistic and stylized images"
+            }
+        elif "deepfloyd" in model_lower:
+            return {
+                "num_inference_steps": 50,
+                "guidance_scale": 7.5,
+                "height": 256,  # Start smaller for DeepFloyd
+                "width": 256,
+                "optimal_for": "photorealistic high-resolution images"
+            }
+    
+    # Default settings
+    return {
+        "num_inference_steps": 20,
+        "guidance_scale": 7.5,
+        "height": 512,
+        "width": 512,
+        "optimal_for": "general purpose image generation"
+    }
+
 
 def check_text_to_image_compatibility() -> Dict[str, Any]:
     """
@@ -305,7 +505,7 @@ def pipeline(
 
 
 def _create_text_to_image_pipeline(model: Optional[str], torch_dtype, device: str):
-    """Create a text-to-image pipeline with error handling."""
+    """Create a text-to-image pipeline with model-specific handling."""
     # Check package compatibility first
     is_compatible, error_msg = check_package_compatibility()
     
@@ -316,13 +516,54 @@ def _create_text_to_image_pipeline(model: Optional[str], torch_dtype, device: st
             raise RuntimeError(f"Cannot create text-to-image pipeline: {error_msg}")
     
     try:
-        from diffusers import AutoPipelineForText2Image
-        return AutoPipelineForText2Image.from_pretrained(
-            model, 
-            torch_dtype=torch_dtype
-        ).to(device)
+        # Use model-specific pipeline based on the model identifier
+        pipeline_class, pipeline_kwargs = _get_pipeline_for_model(model)
+        
+        # Common parameters for all pipelines
+        common_kwargs = {
+            'torch_dtype': torch_dtype,
+            **pipeline_kwargs
+        }
+        
+        # Create and move pipeline to device
+        pipeline = pipeline_class.from_pretrained(model, **common_kwargs)
+        return pipeline.to(device)
+        
     except Exception as e:
         raise RuntimeError(_create_pipeline_error_message(str(e)))
+
+
+def _get_pipeline_for_model(model: Optional[str]) -> Tuple[Any, Dict[str, Any]]:
+    """
+    Determine the appropriate pipeline class and kwargs for a specific model.
+    
+    Returns:
+        Tuple of (pipeline_class, additional_kwargs)
+    """
+    if not model:
+        model = "stable-diffusion-v1-5/stable-diffusion-v1-5"
+    
+    model_lower = model.lower()
+    
+    # Kandinsky models
+    if "kandinsky" in model_lower:
+        from diffusers import KandinskyV22Pipeline
+        return KandinskyV22Pipeline, {}
+    
+    # DeepFloyd IF models
+    elif "deepfloyd" in model_lower and "if-i" in model_lower:
+        from diffusers import IFPipeline
+        return IFPipeline, {"variant": "fp16", "use_safetensors": True}
+    
+    # Stable Diffusion models (including v1-5, v2-1, etc.)
+    elif any(sd_variant in model_lower for sd_variant in ["stable-diffusion", "runwayml"]):
+        from diffusers import StableDiffusionPipeline
+        return StableDiffusionPipeline, {"use_safetensors": True}
+    
+    # Default: try AutoPipelineForText2Image for unknown models
+    else:
+        from diffusers import AutoPipelineForText2Image
+        return AutoPipelineForText2Image, {}
 
 
 def _create_dll_error_message() -> str:
