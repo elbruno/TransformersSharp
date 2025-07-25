@@ -5,9 +5,10 @@ Console.WriteLine("=== TransformersSharp Text-to-Image Generation (Console3) ===
 Console.WriteLine();
 
 // Test model options (uncomment as needed)
-var model = "kandinsky-community/kandinsky-2-2-decoder";
+//var model = "kandinsky-community/kandinsky-2-2-decoder";
 //var model = "sd-legacy/stable-diffusion-v1-5";
-//var model = "stabilityai/stable-diffusion-2-1";
+//var model = "DeepFloyd/IF-I-M-v1.0";
+var model = "stabilityai/stable-diffusion-2-1";
 
 Console.WriteLine($"Model: {model}");
 Console.WriteLine("Device: CUDA (with CPU fallback)");

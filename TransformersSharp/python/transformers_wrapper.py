@@ -828,7 +828,54 @@ def invoke_text_to_image_pipeline(
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning, message=".*callback_steps.*")
         
-        if hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
+        # Check if this is a Kandinsky V22 Pipeline that needs special handling
+        pipeline_class_name = pipeline.__class__.__name__
+        
+        if "KandinskyV22" in pipeline_class_name and "Combined" not in pipeline_class_name:
+            # This is a regular KandinskyV22Pipeline that needs prior embeddings
+            # We need to use the combined pipeline approach
+            try:
+                from diffusers import KandinskyV22PriorPipeline
+                
+                # Extract model path from the pipeline
+                model_path = getattr(pipeline, '_name_or_path', 'kandinsky-community/kandinsky-2-2-decoder')
+                prior_model_path = model_path.replace('-decoder', '-prior')
+                
+                # Create prior pipeline to generate embeddings
+                prior_pipeline = KandinskyV22PriorPipeline.from_pretrained(
+                    prior_model_path,
+                    torch_dtype=pipeline.dtype if hasattr(pipeline, 'dtype') else None
+                ).to(pipeline.device)
+                
+                # Generate embeddings using the prior
+                image_embeds, negative_image_embeds = prior_pipeline(
+                    text,
+                    guidance_scale=guidance_scale
+                ).to_tuple()
+                
+                # Use the decoder pipeline with the embeddings
+                result = pipeline(
+                    image_embeds=image_embeds,
+                    negative_image_embeds=negative_image_embeds,
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    height=height,
+                    width=width
+                )
+                image = result.images[0]
+                
+            except Exception as e:
+                # Fallback: try to handle as a regular diffusers pipeline
+                result = pipeline(
+                    text, 
+                    num_inference_steps=num_inference_steps,
+                    guidance_scale=guidance_scale,
+                    height=height,
+                    width=width
+                )
+                image = result.images[0] if hasattr(result, 'images') else result
+                
+        elif hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
             # This is a diffusers pipeline
             result = pipeline(
                 text, 
