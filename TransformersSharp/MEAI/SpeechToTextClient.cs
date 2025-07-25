@@ -1,12 +1,13 @@
 ﻿using Microsoft.Extensions.AI;
 using TransformersSharp.Pipelines;
+using System.Runtime.CompilerServices;
 
 namespace TransformersSharp.MEAI;
 
 #pragma warning disable MEAI001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 public class SpeechToTextClient : ISpeechToTextClient
 {
-    public AutomaticSpeechRecognitionPipeline AutomaticSpeechRecognitionPipeline { get; private set; }
+    public AutomaticSpeechRecognitionPipeline? AutomaticSpeechRecognitionPipeline { get; private set; }
 
     public static SpeechToTextClient FromModel(string model, TorchDtype? torchDtype = null, string? device = null, bool trustRemoteCode = false)
     {
@@ -38,7 +39,7 @@ public class SpeechToTextClient : ISpeechToTextClient
         return new SpeechToTextResponse(result);
     }
 
-    public async IAsyncEnumerable<SpeechToTextResponseUpdate> GetStreamingTextAsync(Stream audioSpeechStream, SpeechToTextOptions? options = null, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<SpeechToTextResponseUpdate> GetStreamingTextAsync(Stream audioSpeechStream, SpeechToTextOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         // None of the models are streaming yet.
         var response = await GetTextAsync(audioSpeechStream, options, cancellationToken).ConfigureAwait(false);

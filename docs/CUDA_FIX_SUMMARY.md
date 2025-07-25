@@ -15,7 +15,7 @@ Modified `transformers_wrapper.py` to include:
 - `validate_and_get_device()` - Automatically fallback to CPU if CUDA isn't available
 
 ### 2. Improved Error Handling in C#
-Updated `ConsoleApp3/Program.cs` with try-catch blocks to:
+Updated `DemoConsole/ConsoleApp3/Program.cs` with try-catch blocks to:
 - Catch CUDA-related exceptions
 - Automatically retry with CPU device as fallback
 - Provide informative console output about device usage
@@ -138,7 +138,7 @@ With CUDA enabled, image generation tasks show significant performance improveme
 
 1. `TransformersSharp/python/transformers_wrapper.py` - Added CUDA detection functions
 2. `TransformersSharp/TransformerEnvironment.cs` - Added CUDA installation helper method
-3. `ConsoleApp3/Program.cs` - Enhanced error handling with CPU fallback
-4. `ConsoleApp3/TestCudaPerformance.cs` - Performance testing utility (new)
+3. `DemoConsole/ConsoleApp3/Program.cs` - Enhanced error handling with CPU fallback
+4. `DemoConsole/ConsoleApp3/TestCudaPerformance.cs` - Performance testing utility (new)
 
 The solution provides robust CUDA support with automatic fallback capabilities, ensuring the library works regardless of the system's GPU configuration.

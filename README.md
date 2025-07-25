@@ -8,6 +8,22 @@ If you need a specific feature, toggle or pipeline API clone this repo and make 
 
 This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes) and will fetch Python, PyTorch, and Hugging Face Transformers automatically, so you don't need to install them manually.
 
+## ⚠️ Requirements
+
+**TransformersSharp requires .NET 9.0 SDK or later.**
+
+📖 **See [Requirements Documentation](docs/requirements.md) for detailed installation instructions and troubleshooting.**
+
+## Quick Start
+
+1. Install .NET 9.0 SDK from https://dotnet.microsoft.com/download/dotnet/9.0
+2. Clone this repository
+3. Run any of the console applications:
+   ```bash
+   dotnet run --project DemoConsole/ConsoleApp3  # Text-to-image generation
+   dotnet run --project DemoConsole/ConsoleApp4  # Comprehensive testing
+   ```
+
 [Full Documentation](https://tonybaloney.github.io/TransformersSharp/)
 
 ## Features

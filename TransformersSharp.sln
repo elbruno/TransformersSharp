@@ -7,13 +7,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransformersSharp", "Transf
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransformersSharp.Tests", "TransformersSharp.Tests\TransformersSharp.Tests.csproj", "{78C3E483-5EF4-4262-AE51-AE75CF699EFC}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{E48C5D5C-013A-45FA-8695-46122AA0EAB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "DemoConsole\ConsoleApp1\ConsoleApp1.csproj", "{E48C5D5C-013A-45FA-8695-46122AA0EAB1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp2", "ConsoleApp2\ConsoleApp2.csproj", "{39AEED3A-03FC-4A1C-B815-2906D232E6B6}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp2", "DemoConsole\ConsoleApp2\ConsoleApp2.csproj", "{39AEED3A-03FC-4A1C-B815-2906D232E6B6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp3", "ConsoleApp3\ConsoleApp3.csproj", "{7B7BE576-0204-40B5-BFB3-FDE90AFF846F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp3", "DemoConsole\ConsoleApp3\ConsoleApp3.csproj", "{7B7BE576-0204-40B5-BFB3-FDE90AFF846F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp4", "ConsoleApp4\ConsoleApp4.csproj", "{9D77017A-8D14-41A6-A910-8550D4C6F874}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp4", "DemoConsole\ConsoleApp4\ConsoleApp4.csproj", "{9D77017A-8D14-41A6-A910-8550D4C6F874}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TransformersSharp.EnvironmentTest", "DemoConsole\TransformersSharp.EnvironmentTest\TransformersSharp.EnvironmentTest.csproj", "{B8C2E8F1-9A4D-4E2F-8B5C-6D7E9F0A1B2C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D77017A-8D14-41A6-A910-8550D4C6F874}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8C2E8F1-9A4D-4E2F-8B5C-6D7E9F0A1B2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8C2E8F1-9A4D-4E2F-8B5C-6D7E9F0A1B2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8C2E8F1-9A4D-4E2F-8B5C-6D7E9F0A1B2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8C2E8F1-9A4D-4E2F-8B5C-6D7E9F0A1B2C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
