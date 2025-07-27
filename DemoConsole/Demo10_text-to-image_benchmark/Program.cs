@@ -1,6 +1,8 @@
 ﻿
 using Demo10_text_to_image_benchmark;
+using System.Reflection.Metadata.Ecma335;
 using TransformersSharp;
+using static Demo10_text_to_image_benchmark.ImageGenerator;
 
 namespace Demo10_text_to_image_benchmark
 {
@@ -14,27 +16,31 @@ namespace Demo10_text_to_image_benchmark
         {
             "A pixelated image of a beaver in Canada.",
             "A futuristic city skyline at sunset.",
-            "A cat riding a skateboard in a park.",
-            "A surreal landscape with floating islands and waterfalls.",
-            "A robot painting a portrait of a human.",
-            "A fantasy castle surrounded by a magical forest.",
-            "A vintage car driving through a neon-lit street.",
-            "A cozy cabin in the mountains during winter.",
-            "A dragon flying over a medieval village.",
-            "A space scene with planets and stars in the background.",
-            "A close-up of a flower with dew drops on its petals.",
-            "A whimsical underwater scene with colorful fish and coral.",
-            "A steampunk-inspired airship sailing through the clouds.",
-            "A futuristic robot serving coffee in a cafe."
+            //"A cat riding a skateboard in a park.",
+            //"A surreal landscape with floating islands and waterfalls.",
+            //"A robot painting a portrait of a human.",
+            //"A fantasy castle surrounded by a magical forest.",
+            //"A vintage car driving through a neon-lit street.",
+            //"A cozy cabin in the mountains during winter.",
+            //"A dragon flying over a medieval village.",
+            //"A space scene with planets and stars in the background.",
+            //"A close-up of a flower with dew drops on its petals.",
+            //"A whimsical underwater scene with colorful fish and coral.",
+            //"A steampunk-inspired airship sailing through the clouds.",
+            //"A futuristic robot serving coffee in a cafe.",
+            //"A magical library with floating books and glowing orbs."
         };
+
+        private static int ImageSize = 512; // Fixed image size for benchmarking
+        private static string model = "kandinsky-community/kandinsky-2-2-decoder"; 
 
         private static readonly List<ImageGenerationResult> CpuResults = new();
         private static readonly List<ImageGenerationResult> GpuResults = new();
 
         static void Main(string[] args)
         {
-            Console.WriteLine("=== TransformersSharp Text-to-Image Benchmark - 256x256 Generation ===\n");
-            Console.WriteLine("Image size: 256x256 pixels (optimized for performance testing)\n");
+            Console.WriteLine($"=== TransformersSharp Text-to-Image Benchmark - {ImageSize}x{ImageSize} Generation ===\n");
+            Console.WriteLine($"Image size: {ImageSize}x{ImageSize} pixels (optimized for performance testing)\n");
             Console.WriteLine("=== Benchmark Start ===");
 
             PerformCpuTests();
@@ -57,7 +63,7 @@ namespace Demo10_text_to_image_benchmark
 
             foreach (var prompt in SamplePrompts)
             {
-                RunImageGenerationTest(prompt, "cpu", CpuResults);                
+                RunImageGenerationTest(prompt, "cpu", CpuResults);
             }
             Console.WriteLine("----------------------");
         }
@@ -91,7 +97,15 @@ namespace Demo10_text_to_image_benchmark
 
             try
             {
-                using var generator = new ImageGenerator(device: device);
+                var imgGenSettings = new ImageGenerationSettings()
+                {
+                    Height = ImageSize,
+                    Width = ImageSize,
+                };
+                using var generator = new ImageGenerator(
+                    device: device, 
+                    model: model, 
+                    settings: imgGenSettings);
                 var result = generator.GenerateImage(prompt);
                 results.Add(result);
                 Console.WriteLine($" >> ✅ {device.ToUpper()}: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
@@ -114,6 +128,9 @@ namespace Demo10_text_to_image_benchmark
         {
             Console.WriteLine("==============================");
             Console.WriteLine("=== Performance Comparison ===");
+            Console.WriteLine($"Image size: {ImageSize}x{ImageSize} pixels");
+            Console.WriteLine();
+
 
             if (GpuResults.Count > 0)
             {
