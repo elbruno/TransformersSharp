@@ -32,10 +32,41 @@ namespace Demo10_text_to_image_benchmark
             PerformCpuTests();
             PerformGpuTests();
 
+            SaveResultsToCsv();
+
             DisplayPerformanceComparison();
             DisplayTestExecutionSummary();
 
             Console.WriteLine("=== Benchmark Complete ===");
+        }
+
+
+        /// <summary>
+        /// Saves all image generation results to a CSV file.
+        /// </summary>
+        private static void SaveResultsToCsv()
+        {
+            var allResults = CpuResults.Concat(GpuResults).ToList();
+            if (allResults.Count == 0)
+                return;
+
+            var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var csvPath = Path.Combine(desktopPath, $"TransformersSharp_Benchmark_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+
+            using (var writer = new StreamWriter(csvPath))
+            {
+                writer.WriteLine("Prompt,Width,Height,FileName,FileFullPath,TimeTakenSeconds,DeviceType");
+                foreach (var r in allResults)
+                {
+                    string safePrompt = r.Prompt?.Replace("\"", "\"\"") ?? string.Empty;
+                    string safeFileName = r.FileName?.Replace("\"", "\"\"") ?? string.Empty;
+                    string safeFileFullPath = r.FileFullPath?.Replace("\"", "\"\"") ?? string.Empty;
+                    string safeDeviceType = r.DeviceType?.Replace("\"", "\"\"") ?? string.Empty;
+                    writer.WriteLine($"\"{safePrompt}\",{r.Width},{r.Height},\"{safeFileName}\",\"{safeFileFullPath}\",{r.TimeTakenSeconds},{safeDeviceType}");
+                }
+            }
+            Console.WriteLine($"CSV results saved to: {csvPath}");
+
         }
 
 
@@ -94,7 +125,7 @@ namespace Demo10_text_to_image_benchmark
                     settings: imgGenSettings);
                 var result = generator.GenerateImage(prompt);
                 results.Add(result);
-                Console.WriteLine($" >> ✅ {device.ToUpper()}: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
+                Console.WriteLine($" >> ✅ {device.ToUpper()}: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileName}");
             }
             catch (Exception ex)
             {

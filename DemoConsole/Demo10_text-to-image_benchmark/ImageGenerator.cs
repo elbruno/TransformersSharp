@@ -124,7 +124,9 @@ public class ImageGenerator : IDisposable
         return new ImageGenerationResult
         {
             Prompt = prompt,
-            FileGenerated = filepath,
+            Height = _settings.Height,
+            Width = _settings.Width,
+            FileFullPath = filepath,
             TimeTakenSeconds = stopwatch.Elapsed.TotalSeconds,
             DeviceType = _pipeline.DeviceType
         };
