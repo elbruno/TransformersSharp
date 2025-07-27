@@ -3,16 +3,9 @@ using System.Globalization;
 using System.Text;
 
 namespace Demo10_text_to_image_benchmark;
-
-public class ExportResultPaths
-{
-    public string? CsvPath { get; set; }
-    public string? MarkdownPath { get; set; }
-    public string? HtmlPath { get; set; }
-}
 public static class BenchmarkReportManager
 {
-    public static ExportResultPaths ExportAll(List<ImageGenerationResult> allResults, string[] samplePrompts, List<ImageGenerationResult> cpuResults, List<ImageGenerationResult> gpuResults)
+    public static (string? CsvPath, string? MarkdownPath, string? HtmlPath) ExportAll(List<ImageGenerationResult> allResults, string[] samplePrompts, List<ImageGenerationResult> cpuResults, List<ImageGenerationResult> gpuResults)
     {
         string outputFolder = GetDefaultOutputFolder();
         var firstResult = allResults.FirstOrDefault();
@@ -27,7 +20,7 @@ public static class BenchmarkReportManager
         var mdPath = ExportToMarkdown(cpuResults, samplePrompts, gpuResults, outputFolder, exportTimestamp);
         var htmlPath = ExportToHtml(cpuResults, samplePrompts, gpuResults, outputFolder, exportTimestamp);
         ExportToConsole(cpuResults, samplePrompts, gpuResults, exportTimestamp);
-        return new ExportResultPaths { CsvPath = csvPath, MarkdownPath = mdPath, HtmlPath = htmlPath };
+        return (CsvPath: csvPath, MarkdownPath: mdPath, HtmlPath: htmlPath);
     }
 
     // Uses LibreHardwareMonitorLib for hardware info
