@@ -11,4 +11,10 @@
     <ProjectReference Include="..\..\TransformersSharp\TransformersSharp.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="sample_prompts.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
