@@ -217,7 +217,6 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("==============================");
             Console.WriteLine("=== Test Complete ===");
             Console.WriteLine();
-            Console.WriteLine("==============================");
             Console.WriteLine("=== System Information ===");
 
             try
