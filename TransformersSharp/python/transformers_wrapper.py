@@ -927,9 +927,9 @@ def invoke_text_to_image_pipeline(
 
     # Print image properties for debugging
     try:
-        print(f"[DEBUG] Image mode: {image.mode}, size: {image.size}")
+    # Debug print removed
     except Exception as e:
-        print(f"[DEBUG] Could not get image properties: {e}")
+    # Debug print removed
 
     # Convert PIL Image to bytes
     return convert_image_to_bytes(image)
