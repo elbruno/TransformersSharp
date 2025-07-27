@@ -1,13 +1,13 @@
 ﻿using TransformersSharp;
 using TransformersSharp.Pipelines;
 
-Console.WriteLine("=== TransformersSharp Text-to-Image Generation (Console3) ===");
+Console.WriteLine("=== TransformersSharp Text-to-Image Generation - FLUX.1-dev (Console4) ===");
 Console.WriteLine();
 
-var model = "kandinsky-community/kandinsky-2-2-decoder";
+var model = "black-forest-labs/FLUX.1-dev";
 
 Console.WriteLine($"Model: {model}");
-Console.WriteLine("Prompt: A pixelated image of a beaver in Canada");
+Console.WriteLine("Prompt: A majestic dragon flying over a medieval castle at sunset");
 Console.WriteLine();
 
 Console.WriteLine("Creating text-to-image pipeline...");
@@ -18,11 +18,11 @@ Console.WriteLine();
 
 Console.WriteLine("Generating image...");
 var result = pipeline.Generate(
-    "A pixelated image of a beaver in Canada",
-    numInferenceSteps: 30,
-    guidanceScale: 7.5f,
-    height: 512,
-    width: 512);
+    "A majestic dragon flying over a medieval castle at sunset",
+    numInferenceSteps: 20,
+    guidanceScale: 3.5f,
+    height: 1024,
+    width: 1024);
 
 Console.WriteLine("✅ Image generation completed");
 Console.WriteLine();
@@ -32,7 +32,7 @@ var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 var folderPath = Path.Combine(desktopPath, "TransformersSharpImages");
 Directory.CreateDirectory(folderPath);
 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-var filename = $"image_{pipeline!.DeviceType}_{timestamp}.png";
+var filename = $"image_flux_{pipeline!.DeviceType}_{timestamp}.png";
 var destinationPath = Path.Combine(folderPath, filename);
 File.WriteAllBytes(destinationPath, result.ImageBytes);
 

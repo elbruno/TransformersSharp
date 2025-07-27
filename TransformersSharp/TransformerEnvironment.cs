@@ -35,7 +35,12 @@ namespace TransformersSharp
             "hf_xet",
             "torch",
             "torchvision",
-            "torchaudio"
+            "torchaudio",
+            // FLUX.1-dev specific requirements
+            "optimum",
+            "transformers[flax]",
+            "sentencepiece",
+            "protobuf"
             // Note: Standard torch packages included - pip will choose appropriate CPU/CUDA versions
             // based on system compatibility and available package variants
         };
