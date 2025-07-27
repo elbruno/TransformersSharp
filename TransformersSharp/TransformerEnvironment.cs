@@ -15,28 +15,50 @@ namespace TransformersSharp
         private static readonly Lock _setupLock = new();
         private static readonly string[] _coreRequirements =
         {
-            "transformers>=4.40.0",
-            "tokenizers>=0.19.0", 
-            "sentence_transformers",
-            "torch>=2.0.0",
-            "torchvision",
-            "torchaudio",
-            "pillow",
-            "timm",
-            "einops",
-            "diffusers>=0.27.0",
-            "accelerate",
-            "psutil",
-            "safetensors",
-            "scipy",
-            "numpy",
-            "huggingface_hub",
-            // FLUX.1-dev specific requirements
-            "optimum",
-            "sentencepiece",
-            "protobuf"
-            // Note: Standard torch packages included - pip will choose appropriate CPU/CUDA versions
-            // based on system compatibility and available package variants
+            "accelerate==1.9.0",
+            "certifi==2025.7.14",
+            "charset-normalizer==3.4.2",
+            "colorama==0.4.6",
+            "diffusers==0.34.0",
+            "einops==0.8.1",
+            "filelock==3.13.1",
+            "fsspec==2024.6.1",
+            "huggingface-hub==0.34.1",
+            "idna==3.10",
+            "importlib_metadata==8.7.0",
+            "Jinja2==3.1.4",
+            "joblib==1.5.1",
+            "MarkupSafe==2.1.5",
+            "mpmath==1.3.0",
+            "networkx==3.3",
+            "numpy==2.1.2",
+            "optimum==1.26.1",
+            "packaging==25.0",
+            "pillow==11.0.0",
+            "protobuf==6.31.1",
+            "psutil==7.0.0",
+            "PyYAML==6.0.2",
+            "regex==2024.11.6",
+            "requests==2.32.4",
+            "safetensors==0.5.3",
+            "scikit-learn==1.7.1",
+            "scipy==1.16.0",
+            "sentence-transformers==5.0.0",
+            "sentencepiece==0.2.0",
+            "setuptools==70.2.0",
+            "sympy==1.13.1",
+            "threadpoolctl==3.6.0",
+            "timm==1.0.19",
+            "tokenizers==0.21.2",
+            "torch==2.5.1",
+            "torchaudio==2.5.1",
+            "torchvision==0.20.1",
+            "tqdm==4.67.1",
+            "transformers==4.54.0",
+            "typing_extensions==4.12.2",
+            "urllib3==2.5.0",
+            "uv==0.8.3",
+            "zipp==3.23.0"
         };
 
         static TransformerEnvironment()
@@ -139,14 +161,14 @@ namespace TransformersSharp
             return @"
 import subprocess
 import sys
-import os
 
 def main():
-    python_version = f'{sys.version_info.major}.{sys.version_info.minor}'
-    print(f'Current Python version: {python_version}')
-    
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'torch', 'torchvision', 'torchaudio'])
-    print('PyTorch installed successfully.')
+    subprocess.check_call([
+        sys.executable, '-m', 'pip', 'install',
+        'torch', 'torchvision', 'torchaudio',
+        '--index-url', 'https://download.pytorch.org/whl/cu121'
+    ])
+    print('PyTorch (CUDA) installed successfully.')
 
 if __name__ == '__main__':
     main()

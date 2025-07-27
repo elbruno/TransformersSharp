@@ -417,29 +417,27 @@ def _create_text_to_image_pipeline(model: Optional[str], torch_dtype, device: st
     try:
         # Use model-specific pipeline based on the model identifier
         pipeline_class, pipeline_kwargs = _get_pipeline_for_model(model)
-        
-        # Model-specific torch_dtype handling
-        if model and "flux" in model.lower() and ("1-dev" in model.lower() or "1.1-dev" in model.lower()):
-            # FLUX models work best with bfloat16 on CUDA, or float32 on CPU
+
+        # Special handling for Kandinsky: use torch_dtype only if CUDA
+        if model and "kandinsky" in model.lower():
             if device == "cuda" and torch.cuda.is_available():
-                torch_dtype = torch.bfloat16
+                pipeline = pipeline_class.from_pretrained(model, torch_dtype=torch.float16, **pipeline_kwargs)
             else:
-                torch_dtype = torch.float32
-        
-        # Common parameters for all pipelines
-        common_kwargs = {
-            'torch_dtype': torch_dtype,
-            **pipeline_kwargs
-        }
-        
-        # Create pipeline
-        pipeline = pipeline_class.from_pretrained(model, **common_kwargs)
-        
+                pipeline = pipeline_class.from_pretrained(model, **pipeline_kwargs)
+        # FLUX models work best with bfloat16 on CUDA, or float32 on CPU
+        elif model and "flux" in model.lower() and ("1-dev" in model.lower() or "1.1-dev" in model.lower()):
+            if device == "cuda" and torch.cuda.is_available():
+                pipeline = pipeline_class.from_pretrained(model, torch_dtype=torch.bfloat16, **pipeline_kwargs)
+            else:
+                pipeline = pipeline_class.from_pretrained(model, torch_dtype=torch.float32, **pipeline_kwargs)
+        else:
+            # Common parameters for all other pipelines
+            common_kwargs = {'torch_dtype': torch_dtype, **pipeline_kwargs} if torch_dtype is not None else {**pipeline_kwargs}
+            pipeline = pipeline_class.from_pretrained(model, **common_kwargs)
+
         # Move to device
         pipeline = pipeline.to(device)
-        
         return pipeline
-        
     except Exception as e:
         raise RuntimeError(_create_pipeline_error_message(str(e)))
 
