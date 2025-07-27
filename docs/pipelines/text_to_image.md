@@ -6,30 +6,20 @@ The Text-to-Image pipeline in TransformersSharp enables you to generate high-qua
 
 TransformersSharp automatically detects and configures the appropriate pipeline for different model types:
 
-### Stable Diffusion v1.5 (Default)
-- **Model**: `stable-diffusion-v1-5/stable-diffusion-v1-5`
-- **Pipeline**: StableDiffusionPipeline
-- **Use Case**: General-purpose text-to-image generation with excellent balance of quality and speed
-- **Image Size**: 512x512 pixels (recommended)
-
-### Stable Diffusion v2.1
-- **Model**: `stabilityai/stable-diffusion-2-1`
-- **Pipeline**: StableDiffusionPipeline
-- **Use Case**: Improved image quality and better prompt adherence
-- **Image Size**: 768x768 pixels (recommended)
-
-### Kandinsky 2.2
+### Kandinsky 2.2 (Default)
 - **Model**: `kandinsky-community/kandinsky-2-2-decoder`
 - **Pipeline**: KandinskyV22Pipeline
-- **Use Case**: Artistic style generation with unique aesthetic
-- **Image Size**: 512x512 pixels
+- **Use Case**: Artistic style generation with unique aesthetic, now the default for balanced performance
+- **Default Size**: 256x256 pixels (optimized for performance, can be customized)
 
-### DeepFloyd IF
-- **Model**: `DeepFloyd/IF-I-M-v1.0`
-- **Pipeline**: IFPipeline
-- **Use Case**: High-resolution, photorealistic image generation
-- **Image Size**: 64x64 to 1024x1024 pixels
-- **Note**: Requires acceptance of license terms on HuggingFace
+### FLUX.1-dev
+- **Model**: `black-forest-labs/FLUX.1-dev`
+- **Pipeline**: FluxPipeline (with AutoPipeline fallback)
+- **Use Case**: State-of-the-art text-to-image generation with high quality and prompt adherence
+- **Default Size**: 256x256 pixels (can be increased to 1024x1024 for maximum quality)
+- **Note**: Requires HuggingFace token and model access approval
+- **Authentication**: Gated model requiring HuggingFace login
+- **Advanced Features**: Supports max_sequence_length, seed for reproducibility, and CPU offloading
 
 ## Architecture
 
@@ -49,7 +39,7 @@ This modular design ensures better maintainability and allows for independent op
 ```csharp
 using TransformersSharp.Pipelines;
 
-// Create pipeline with default model (Stable Diffusion v1.5)
+// Create pipeline with default model (Kandinsky 2.2)
 var pipeline = TextToImagePipeline.FromModel();
 
 // Generate image
@@ -59,7 +49,9 @@ var result = pipeline.Generate("A beautiful sunset over mountains");
 File.WriteAllBytes("sunset.png", result.ImageBytes);
 ```
 
-### Advanced Configuration
+### Advanced FLUX.1-dev Configuration
+
+FLUX.1-dev supports additional parameters for enhanced control and reproducibility. The implementation follows the official FLUX.1-dev sample code pattern with optimizations:
 
 ```csharp
 using TransformersSharp;
@@ -68,42 +60,124 @@ using TransformersSharp.Models;
 
 // Create pipeline with specific model and device
 var pipeline = TextToImagePipeline.FromModel(
-    model: "stabilityai/stable-diffusion-2-1",
+    model: "black-forest-labs/FLUX.1-dev",
     device: "cuda",  // Use GPU if available
-    silentDeviceFallback: true  // Silently fall back to CPU if CUDA unavailable
+    silentDeviceFallback: true,  // Silently fall back to CPU if CUDA unavailable
+    huggingFaceToken: "your_hf_token_here"  // Required for gated models
 );
 
-// Generate with custom parameters
+// Generate with FLUX-optimized parameters (following official sample code)
 var result = pipeline.Generate(
-    prompt: "A futuristic cityscape with flying cars",
-    numInferenceSteps: 50,      // Higher = better quality, slower
-    guidanceScale: 7.5f,        // Higher = more prompt adherence
-    height: 768,                // Image height
-    width: 768                  // Image width
+    prompt: "A cat holding a sign that says hello world",  // Sample from FLUX.1-dev docs
+    numInferenceSteps: 50,          // FLUX recommended steps (as per official sample)
+    guidanceScale: 3.5f,            // FLUX optimized guidance scale
+    height: 256,                    // Default optimized size (can go up to 1024)
+    width: 256,                     // Default optimized size (can go up to 1024)
+    maxSequenceLength: 512,         // FLUX-specific parameter for prompt processing
+    seed: 0,                        // For reproducible results (matches sample code)
+    enableModelCpuOffload: true     // Memory optimization (GPU-aware CPU offloading)
 );
 
 Console.WriteLine($"Generated {result.Width}x{result.Height} image");
 ```
 
-### Using ImageGenerator (Recommended)
+#### FLUX.1-dev Implementation Details
 
-The `ImageGenerator` class provides a high-level interface with automatic pipeline management:
+The FLUX.1-dev implementation follows the official HuggingFace sample code:
+
+- **torch.bfloat16**: Automatically set for CUDA devices for optimal performance
+- **CPU offloading**: Only enabled when GPU is available (follows sample pattern)
+- **CPU generator**: Uses CPU-based random generator for reproducible results across devices
+- **Optimized parameters**: Default values match the official FLUX.1-dev recommendations
+
+### HuggingFace Authentication
+
+For gated models like FLUX.1-dev, you need to authenticate with HuggingFace. TransformersSharp supports multiple authentication methods:
 
 ```csharp
-using DemoConsole.ConsoleApp4;
+// Method 1: Pass token directly to pipeline
+var pipeline = TextToImagePipeline.FromModel(
+    model: "black-forest-labs/FLUX.1-dev",
+    huggingFaceToken: "your_hf_token_here"
+);
 
-// Create generator with custom settings
-var settings = new ImageGenerator.ImageGenerationSettings
+// Method 2: Global authentication (applies to all subsequent operations)
+TransformerEnvironment.Login("your_hf_token_here");
+var pipeline = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
+
+// Method 3: Environment variable (recommended for security)
+// Set HF_TOKEN or HUGGINGFACE_TOKEN environment variable
+// The pipeline will automatically use it when provided
+
+// Method 4: User Secrets (recommended for development)
+// Use dotnet user-secrets for secure local development
+// dotnet user-secrets set "HF_TOKEN" "your_token_here"
+```
+
+#### Getting a HuggingFace Token
+
+1. Visit [HuggingFace Token Settings](https://huggingface.co/settings/tokens)
+2. Create a new token with "Read" permissions
+3. Request access to gated models at their model pages (e.g., [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev))
+4. Wait for approval (usually automatic for FLUX.1-dev)
+
+#### User Secrets for Development
+
+For secure local development, use .NET User Secrets:
+
+```bash
+# Set token using User Secrets (recommended for development)
+dotnet user-secrets set "HF_TOKEN" "your_token_here"
+
+# Or use the alternative key
+dotnet user-secrets set "HUGGINGFACE_TOKEN" "your_token_here"
+```
+
+Then in your application:
+
+```csharp
+using Microsoft.Extensions.Configuration;
+
+// Build configuration to read from multiple sources
+var config = new ConfigurationBuilder()
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>()  // Add user secrets support
+    .Build();
+
+// Check for token from multiple sources
+var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN") ?? 
+              Environment.GetEnvironmentVariable("HUGGINGFACE_TOKEN") ??
+              config["HF_TOKEN"] ??
+              config["HUGGINGFACE_TOKEN"];
+
+if (!string.IsNullOrEmpty(hfToken))
+{
+    var pipeline = TextToImagePipeline.FromModel(
+        "black-forest-labs/FLUX.1-dev", 
+        huggingFaceToken: hfToken
+    );
+}
+```
+
+### Using ImageGenerator (Recommended for Benchmarking)
+
+The `ImageGenerator` class in `Demo10_text-to-image_benchmark` provides a high-level interface with automatic pipeline management and performance testing:
+
+```csharp
+using Demo10_text_to_image_benchmark;
+
+// Create generator with custom settings optimized for performance
+var settings = new ImageGenerationSettings
 {
     NumInferenceSteps = 30,
-    GuidanceScale = 8.0f,
-    Height = 512,
-    Width = 512,
+    GuidanceScale = 7.5f,
+    Height = 256,          // Optimized default size
+    Width = 256,           // Optimized default size
     OutputFolder = @"C:\MyImages"
 };
 
 using var generator = new ImageGenerator(
-    model: "stable-diffusion-v1-5/stable-diffusion-v1-5",
+    model: "kandinsky-community/kandinsky-2-2-decoder",  // Default model
     device: "cuda",
     settings: settings
 );
@@ -122,29 +196,20 @@ Console.WriteLine($"Used device: {result.DeviceType}");
 
 | Model | Best For | Speed | Quality | Memory |
 |-------|----------|-------|---------|---------|
-| Stable Diffusion v1.5 | General use, balanced performance | Fast | Good | Low |
-| Stable Diffusion v2.1 | High quality, detailed images | Medium | Excellent | Medium |
-| Kandinsky 2.2 | Artistic, stylized images | Medium | Good | Medium |
-| DeepFloyd IF | Photorealistic, high-res images | Slow | Excellent | High |
+| Kandinsky 2.2 | Artistic, stylized images (Default) | Medium | Good | Medium |
+| FLUX.1-dev | State-of-the-art, photorealistic images | Medium | Excellent | High |
 
 ### Model-Specific Examples
 
 ```csharp
-// Stable Diffusion v1.5 - Great for general use
-var sd15 = TextToImagePipeline.FromModel("stable-diffusion-v1-5/stable-diffusion-v1-5");
-var nature = sd15.Generate("A serene lake surrounded by pine trees");
-
-// Stable Diffusion v2.1 - Better quality and detail
-var sd21 = TextToImagePipeline.FromModel("stabilityai/stable-diffusion-2-1");
-var portrait = sd21.Generate("Portrait of a wise old wizard with a long beard", height: 768, width: 768);
-
-// Kandinsky 2.2 - Artistic style
+// Kandinsky 2.2 - Artistic style (Default)
 var kandinsky = TextToImagePipeline.FromModel("kandinsky-community/kandinsky-2-2-decoder");
 var art = kandinsky.Generate("An abstract painting of music in vibrant colors");
 
-// DeepFloyd IF - Photorealistic (requires HF token for some models)
-var deepfloyd = TextToImagePipeline.FromModel("DeepFloyd/IF-I-M-v1.0");
-var photo = deepfloyd.Generate("A photorealistic image of a cat wearing sunglasses");
+// FLUX.1-dev - State-of-the-art quality (requires HuggingFace token)
+var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN");
+var flux = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev", huggingFaceToken: hfToken);
+var photo = flux.Generate("A photorealistic portrait of a wise old wizard", height: 1024, width: 1024);
 ```
 
 ## Performance Optimization
@@ -165,25 +230,49 @@ else
 }
 ```
 
-### Generation Parameters
+### Performance Optimization
+
+All TransformersSharp demos now use 256x256 pixel images by default for optimal performance. You can customize this for your specific use case:
 
 ```csharp
-// Fast generation (lower quality)
+// Fast generation (default optimized settings)
 var quick = pipeline.Generate(
     prompt: "A simple sketch of a house",
-    numInferenceSteps: 10,      // Fewer steps = faster
-    guidanceScale: 5.0f,        // Lower guidance = faster
-    height: 256,                // Smaller size = faster
-    width: 256
+    numInferenceSteps: 20,      // Optimized for speed
+    guidanceScale: 3.5f,        // FLUX-optimized guidance
+    height: 256,                // Default optimized size
+    width: 256,                 // Default optimized size
+    seed: 42                    // Reproducible results
 );
 
-// High quality generation (slower)
+// High quality generation (larger output)
 var detailed = pipeline.Generate(
     prompt: "A highly detailed oil painting of a Victorian mansion",
-    numInferenceSteps: 100,     // More steps = better quality
-    guidanceScale: 12.0f,       // Higher guidance = more detailed
-    height: 768,                // Larger size = more detail
-    width: 768
+    numInferenceSteps: 50,      // More steps for FLUX quality
+    guidanceScale: 3.5f,        // FLUX-optimized guidance
+    height: 1024,               // Increase for maximum detail
+    width: 1024,                // Increase for maximum detail
+    maxSequenceLength: 512,     // FLUX-specific prompt processing
+    enableModelCpuOffload: true // Memory optimization (GPU-aware)
+);
+```
+
+#### GPU-Aware CPU Offloading
+
+The `enableModelCpuOffload` parameter implements intelligent GPU detection:
+
+```csharp
+// For FLUX.1-dev: CPU offloading only enabled when GPU is available
+// This follows the official sample code pattern from HuggingFace
+var fluxPipeline = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
+
+// CPU offloading will only be applied if:
+// 1. enableModelCpuOffload is true
+// 2. CUDA GPU is available and accessible
+// 3. Pipeline supports the enable_model_cpu_offload() method
+var result = fluxPipeline.Generate(
+    "A majestic dragon",
+    enableModelCpuOffload: true  // Smart GPU detection built-in
 );
 ```
 
@@ -233,7 +322,7 @@ var result = pipeline.Generate(
 try
 {
     var pipeline = TextToImagePipeline.FromModel(
-        model: "stable-diffusion-v1-5/stable-diffusion-v1-5",
+        model: "kandinsky-community/kandinsky-2-2-decoder",
         device: "cuda",
         silentDeviceFallback: true
     );
@@ -313,12 +402,13 @@ Console.WriteLine($"CUDA Available: {deviceInfo.CudaAvailable}");
 
 2. **Out of Memory (CUDA)**
    ```csharp
-   // Reduce image size or use CPU
+   // Use optimized defaults or reduce image size further
    var result = pipeline.Generate(
        "Your prompt",
-       height: 256,  // Smaller size
+       height: 256,  // Optimized default size
        width: 256,
-       numInferenceSteps: 20  // Fewer steps
+       numInferenceSteps: 20,     // Balanced steps
+       enableModelCpuOffload: true // Enable CPU offloading for memory
    );
    ```
 
@@ -328,7 +418,15 @@ Console.WriteLine($"CUDA Available: {deviceInfo.CudaAvailable}");
    Models are downloaded to: %USERPROFILE%\.cache\huggingface\transformers
    ```
 
-4. **Slow Generation on CPU**
+4. **Authentication Issues (Gated Models)**
+   ```
+   Error: "Access to model X is restricted"
+   Solution: 
+   1. Get HuggingFace token from https://huggingface.co/settings/tokens
+   2. Request access to the specific model
+   3. Set HF_TOKEN environment variable or pass token to pipeline
+   ```
+5. **Slow Generation on CPU**
    ```
    This is normal. Consider:
    - Using smaller image sizes (256x256 instead of 512x512)

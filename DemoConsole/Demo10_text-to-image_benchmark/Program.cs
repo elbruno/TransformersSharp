@@ -1,11 +1,12 @@
 ﻿
-using ConsoleApp4;
+using Demo10_text_to_image_benchmark;
 using TransformersSharp;
 
-namespace ConsoleApp4
+namespace Demo10_text_to_image_benchmark
 {
     /// <summary>
     /// Console application for testing and benchmarking TransformersSharp image generation performance.
+    /// Updated for 256x256 image generation benchmarks.
     /// </summary>
     internal class Program
     {
@@ -22,8 +23,8 @@ namespace ConsoleApp4
 
         static void Main(string[] args)
         {
-            Console.WriteLine("=== TransformersSharp Image Generation Performance Test ===\n");
-            Console.WriteLine("Image size: 256x256 pixels\n");
+            Console.WriteLine("=== TransformersSharp Text-to-Image Benchmark - 256x256 Generation ===\n");
+            Console.WriteLine("Image size: 256x256 pixels (optimized for performance testing)\n");
 
             if (!PerformDiagnosticCheck()) return;
             
@@ -46,7 +47,7 @@ namespace ConsoleApp4
             DisplayPerformanceComparison();
             DisplaySystemInformation();
             
-            Console.WriteLine("=== Test Complete ===");
+            Console.WriteLine("=== Benchmark Complete ===");
         }
 
         /// <summary>

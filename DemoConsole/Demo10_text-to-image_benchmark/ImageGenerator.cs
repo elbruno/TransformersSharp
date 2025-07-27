@@ -2,7 +2,7 @@ using System.Diagnostics;
 using TransformersSharp;
 using TransformersSharp.Pipelines;
 
-namespace ConsoleApp4;
+namespace Demo10_text_to_image_benchmark;
 
 /// <summary>
 /// High-performance image generator for text-to-image generation with optimized pipeline management.

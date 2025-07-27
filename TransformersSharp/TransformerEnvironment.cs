@@ -15,27 +15,26 @@ namespace TransformersSharp
         private static readonly Lock _setupLock = new();
         private static readonly string[] _coreRequirements =
         {
-            "transformers",
+            "transformers>=4.40.0",
+            "tokenizers>=0.19.0", 
             "sentence_transformers",
-            "torch",
+            "torch>=2.0.0",
             "torchvision",
             "torchaudio",
             "pillow",
             "timm",
             "einops",
-            "diffusers",
+            "diffusers>=0.27.0",
             "accelerate",
             "psutil",
             "safetensors",
             "scipy",
             "numpy",
             "huggingface_hub",
-            "huggingface_hub[cli,torch]",
-            "huggingface_hub[hf_xet]",
-            "hf_xet",
-            "torch",
-            "torchvision",
-            "torchaudio"
+            // FLUX.1-dev specific requirements
+            "optimum",
+            "sentencepiece",
+            "protobuf"
             // Note: Standard torch packages included - pip will choose appropriate CPU/CUDA versions
             // based on system compatibility and available package variants
         };

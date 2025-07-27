@@ -2,7 +2,7 @@ using System;
 using TransformersSharp;
 using TransformersSharp.Pipelines;
 
-namespace ConsoleApp4
+namespace Demo10_text_to_image_benchmark
 {
     /// <summary>
     /// Example program demonstrating the enhanced text-to-image model support.

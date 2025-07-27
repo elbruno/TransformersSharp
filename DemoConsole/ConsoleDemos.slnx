@@ -6,9 +6,10 @@
     <Project Path="TransformersSharp.EnvironmentTest/TransformersSharp.EnvironmentTest.csproj" />
   </Folder>
   <Folder Name="/3 Console Demos/">
-    <Project Path="ConsoleApp1/ConsoleApp1.csproj" />
-    <Project Path="ConsoleApp2/ConsoleApp2.csproj" />
-    <Project Path="ConsoleApp3/ConsoleApp3.csproj" />
-    <Project Path="ConsoleApp4/ConsoleApp4.csproj" />
+    <Project Path="Demo01_Chat_Qwen/Demo01_Chat_Qwen.csproj" />
+    <Project Path="Demo02_ChatMEAI_Qwen/Demo02_ChatMEAI_Qwen.csproj" />
+    <Project Path="Demo03_text-to-image_Kandinsky/Demo03_text-to-image_Kandinsky.csproj" />
+    <Project Path="Demo04_text-to-image_FLUX/Demo04_text-to-image_FLUX.csproj" />
+    <Project Path="Demo10_text-to-image_benchmark/Demo10_text-to-image_benchmark.csproj" />
   </Folder>
 </Solution>

@@ -104,41 +104,23 @@ def get_supported_text_to_image_models() -> List[Dict[str, Any]]:
     """
     return [
         {
-            "model_id": "stable-diffusion-v1-5/stable-diffusion-v1-5",
-            "pipeline_class": "StableDiffusionPipeline",
-            "default": True,
-            "description": "General-purpose text-to-image generation with excellent balance",
-            "recommended_size": (512, 512),
-            "memory_requirements": "Low",
-            "speed": "Fast"
-        },
-        {
-            "model_id": "stabilityai/stable-diffusion-2-1",
-            "pipeline_class": "StableDiffusionPipeline", 
-            "default": False,
-            "description": "Improved image quality and better prompt adherence",
-            "recommended_size": (768, 768),
-            "memory_requirements": "Medium",
-            "speed": "Medium"
-        },
-        {
             "model_id": "kandinsky-community/kandinsky-2-2-decoder",
             "pipeline_class": "KandinskyV22Pipeline",
-            "default": False,
+            "default": True,
             "description": "Artistic style generation with unique aesthetic",
             "recommended_size": (512, 512),
             "memory_requirements": "Medium",
             "speed": "Medium"
         },
         {
-            "model_id": "DeepFloyd/IF-I-M-v1.0",
-            "pipeline_class": "IFPipeline",
+            "model_id": "black-forest-labs/FLUX.1-dev",
+            "pipeline_class": "FluxPipeline",
             "default": False,
-            "description": "High-resolution, photorealistic image generation",
+            "description": "State-of-the-art text-to-image generation with high quality and prompt adherence",
             "recommended_size": (1024, 1024),
             "memory_requirements": "High",
-            "speed": "Slow",
-            "notes": "Requires HuggingFace token acceptance for some models"
+            "speed": "Medium",
+            "notes": "Requires HuggingFace token acceptance and significant VRAM"
         }
     ]
 
@@ -171,19 +153,7 @@ def validate_text_to_image_model(model: str) -> Dict[str, Any]:
     
     # Check if it's a variant or similar model
     model_lower = model.lower()
-    if any(keyword in model_lower for keyword in ["stable-diffusion", "runwayml"]):
-        return {
-            "supported": True,
-            "model_info": {
-                "model_id": model,
-                "pipeline_class": "StableDiffusionPipeline",
-                "description": "Stable Diffusion variant (auto-detected)",
-                "recommended_size": (512, 512)
-            },
-            "pipeline_class": "StableDiffusionPipeline",
-            "note": "Auto-detected as Stable Diffusion variant"
-        }
-    elif "kandinsky" in model_lower:
+    if "kandinsky" in model_lower:
         return {
             "supported": True,
             "model_info": {
@@ -195,17 +165,17 @@ def validate_text_to_image_model(model: str) -> Dict[str, Any]:
             "pipeline_class": "KandinskyV22Pipeline",
             "note": "Auto-detected as Kandinsky variant"
         }
-    elif "deepfloyd" in model_lower and "if" in model_lower:
+    elif "flux" in model_lower and ("1-dev" in model_lower or "1.1-dev" in model_lower):
         return {
             "supported": True,
             "model_info": {
                 "model_id": model,
-                "pipeline_class": "IFPipeline",
-                "description": "DeepFloyd IF variant (auto-detected)",
+                "pipeline_class": "FluxPipeline",
+                "description": "FLUX variant (auto-detected)",
                 "recommended_size": (1024, 1024)
             },
-            "pipeline_class": "IFPipeline",
-            "note": "Auto-detected as DeepFloyd IF variant"
+            "pipeline_class": "FluxPipeline",
+            "note": "Auto-detected as FLUX variant"
         }
     else:
         return {
@@ -237,7 +207,7 @@ def get_default_text_to_image_model() -> str:
     for model in supported_models:
         if model.get("default", False):
             return model["model_id"]
-    return "stable-diffusion-v1-5/stable-diffusion-v1-5"  # Fallback
+    return "kandinsky-community/kandinsky-2-2-decoder"  # Fallback
 
 
 def get_model_pipeline_class_name(model: str) -> str:
@@ -261,23 +231,7 @@ def get_recommended_settings_for_model(model: str) -> Dict[str, Any]:
         
         # Model-specific recommendations
         model_lower = model.lower()
-        if "stable-diffusion-v1-5" in model_lower:
-            return {
-                "num_inference_steps": 20,
-                "guidance_scale": 7.5,
-                "height": recommended_size[1],
-                "width": recommended_size[0],
-                "optimal_for": "balanced performance and quality"
-            }
-        elif "stable-diffusion-2" in model_lower:
-            return {
-                "num_inference_steps": 30,
-                "guidance_scale": 8.0,
-                "height": recommended_size[1],
-                "width": recommended_size[0],
-                "optimal_for": "high quality detailed images"
-            }
-        elif "kandinsky" in model_lower:
+        if "kandinsky" in model_lower:
             return {
                 "num_inference_steps": 25,
                 "guidance_scale": 7.0,
@@ -285,13 +239,13 @@ def get_recommended_settings_for_model(model: str) -> Dict[str, Any]:
                 "width": recommended_size[0],
                 "optimal_for": "artistic and stylized images"
             }
-        elif "deepfloyd" in model_lower:
+        elif "flux" in model_lower and ("1-dev" in model_lower or "1.1-dev" in model_lower):
             return {
-                "num_inference_steps": 50,
-                "guidance_scale": 7.5,
-                "height": 256,  # Start smaller for DeepFloyd
-                "width": 256,
-                "optimal_for": "photorealistic high-resolution images"
+                "num_inference_steps": 20,
+                "guidance_scale": 3.5,
+                "height": recommended_size[1],
+                "width": recommended_size[0],
+                "optimal_for": "high quality photorealistic and artistic images"
             }
     
     # Default settings
@@ -464,15 +418,27 @@ def _create_text_to_image_pipeline(model: Optional[str], torch_dtype, device: st
         # Use model-specific pipeline based on the model identifier
         pipeline_class, pipeline_kwargs = _get_pipeline_for_model(model)
         
+        # Model-specific torch_dtype handling
+        if model and "flux" in model.lower() and ("1-dev" in model.lower() or "1.1-dev" in model.lower()):
+            # FLUX models work best with bfloat16 on CUDA, or float32 on CPU
+            if device == "cuda" and torch.cuda.is_available():
+                torch_dtype = torch.bfloat16
+            else:
+                torch_dtype = torch.float32
+        
         # Common parameters for all pipelines
         common_kwargs = {
             'torch_dtype': torch_dtype,
             **pipeline_kwargs
         }
         
-        # Create and move pipeline to device
+        # Create pipeline
         pipeline = pipeline_class.from_pretrained(model, **common_kwargs)
-        return pipeline.to(device)
+        
+        # Move to device
+        pipeline = pipeline.to(device)
+        
+        return pipeline
         
     except Exception as e:
         raise RuntimeError(_create_pipeline_error_message(str(e)))
@@ -486,7 +452,7 @@ def _get_pipeline_for_model(model: Optional[str]) -> Tuple[Any, Dict[str, Any]]:
         Tuple of (pipeline_class, additional_kwargs)
     """
     if not model:
-        model = "stable-diffusion-v1-5/stable-diffusion-v1-5"
+        model = "kandinsky-community/kandinsky-2-2-decoder"
     
     model_lower = model.lower()
     
@@ -495,15 +461,15 @@ def _get_pipeline_for_model(model: Optional[str]) -> Tuple[Any, Dict[str, Any]]:
         from diffusers import KandinskyV22Pipeline
         return KandinskyV22Pipeline, {}
     
-    # DeepFloyd IF models
-    elif "deepfloyd" in model_lower and "if-i" in model_lower:
-        from diffusers import IFPipeline
-        return IFPipeline, {"variant": "fp16", "use_safetensors": True}
-    
-    # Stable Diffusion models (including v1-5, v2-1, etc.)
-    elif any(sd_variant in model_lower for sd_variant in ["stable-diffusion", "runwayml"]):
-        from diffusers import StableDiffusionPipeline
-        return StableDiffusionPipeline, {"use_safetensors": True}
+    # FLUX models - use specific FluxPipeline implementation
+    elif "flux" in model_lower and ("1-dev" in model_lower or "1.1-dev" in model_lower):
+        try:
+            from diffusers import FluxPipeline
+            return FluxPipeline, {}
+        except ImportError:
+            # Fallback to AutoPipeline if FluxPipeline is not available
+            from diffusers import AutoPipelineForText2Image
+            return AutoPipelineForText2Image, {}
     
     # Default: try AutoPipelineForText2Image for unknown models
     else:
@@ -804,7 +770,10 @@ def invoke_text_to_image_pipeline(
     num_inference_steps: Optional[int] = 50,
     guidance_scale: Optional[float] = 7.5,
     height: Optional[int] = 512,
-    width: Optional[int] = 512
+    width: Optional[int] = 512,
+    max_sequence_length: Optional[int] = None,
+    seed: Optional[int] = None,
+    enable_model_cpu_offload: bool = False
 ) -> Buffer:
     """
     Invoke a text-to-image pipeline.
@@ -816,6 +785,9 @@ def invoke_text_to_image_pipeline(
         guidance_scale: Guidance scale for generation
         height: Height of generated image
         width: Width of generated image
+        max_sequence_length: Maximum sequence length for FLUX models
+        seed: Random seed for reproducible generation
+        enable_model_cpu_offload: Enable CPU offloading for memory optimization (only if GPU available)
     Returns:
         The generated image as bytes
     """
@@ -823,6 +795,26 @@ def invoke_text_to_image_pipeline(
     import warnings
     from io import BytesIO
     import numpy as np
+    import torch
+    
+    # Enable CPU offloading only if GPU is available and requested
+    # This follows the FLUX.1-dev sample code pattern
+    if enable_model_cpu_offload and torch.cuda.is_available() and hasattr(pipeline, 'enable_model_cpu_offload'):
+        pipeline.enable_model_cpu_offload()
+    
+    # Setup generator for reproducible results
+    generator = None
+    if seed is not None:
+        # For FLUX models, use CPU generator as in the sample code
+        pipeline_class_name = pipeline.__class__.__name__.lower()
+        if "flux" in pipeline_class_name:
+            generator = torch.Generator("cpu").manual_seed(seed)
+        else:
+            # For other models, use device-appropriate generator
+            device = getattr(pipeline, 'device', 'cpu')
+            if hasattr(device, 'type'):
+                device = device.type
+            generator = torch.Generator(device).manual_seed(seed)
     
     # Generate image based on pipeline type
     with warnings.catch_warnings():
@@ -854,46 +846,74 @@ def invoke_text_to_image_pipeline(
                 ).to_tuple()
                 
                 # Use the decoder pipeline with the embeddings
-                result = pipeline(
-                    image_embeds=image_embeds,
-                    negative_image_embeds=negative_image_embeds,
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    height=height,
-                    width=width
-                )
+                kwargs = {
+                    'image_embeds': image_embeds,
+                    'negative_image_embeds': negative_image_embeds,
+                    'num_inference_steps': num_inference_steps,
+                    'guidance_scale': guidance_scale,
+                    'height': height,
+                    'width': width
+                }
+                
+                # Add generator if seed is provided
+                if generator is not None:
+                    kwargs['generator'] = generator
+                
+                result = pipeline(**kwargs)
                 image = result.images[0]
                 
             except Exception as e:
                 # Fallback: try to handle as a regular diffusers pipeline
-                result = pipeline(
-                    text, 
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    height=height,
-                    width=width
-                )
+                kwargs = {
+                    'prompt': text,
+                    'num_inference_steps': num_inference_steps,
+                    'guidance_scale': guidance_scale,
+                    'height': height,
+                    'width': width
+                }
+                
+                # Add generator if seed is provided
+                if generator is not None:
+                    kwargs['generator'] = generator
+                
+                result = pipeline(**kwargs)
                 image = result.images[0] if hasattr(result, 'images') else result
                 
-        elif hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
-            # This is a diffusers pipeline
-            result = pipeline(
-                text, 
-                num_inference_steps=num_inference_steps,
-                guidance_scale=guidance_scale,
-                height=height,
-                width=width
-            )
+        elif hasattr(pipeline, '__call__') and (hasattr(pipeline, 'unet') or "flux" in pipeline_class_name.lower()):
+            # This is a diffusers pipeline (including FLUX)
+            kwargs = {
+                'prompt': text,
+                'num_inference_steps': num_inference_steps,
+                'guidance_scale': guidance_scale,
+                'height': height,
+                'width': width
+            }
+            
+            # Add generator if seed is provided
+            if generator is not None:
+                kwargs['generator'] = generator
+                
+            # Add max_sequence_length for FLUX models
+            if max_sequence_length is not None and 'flux' in pipeline_class_name.lower():
+                kwargs['max_sequence_length'] = max_sequence_length
+            
+            result = pipeline(**kwargs)
             image = result.images[0]
         else:
             # This is a transformers pipeline
-            result = pipeline(
-                text, 
-                num_inference_steps=num_inference_steps,
-                guidance_scale=guidance_scale,
-                height=height,
-                width=width
-            )
+            kwargs = {
+                'prompt': text,
+                'num_inference_steps': num_inference_steps,
+                'guidance_scale': guidance_scale,
+                'height': height,
+                'width': width
+            }
+            
+            # Add generator if seed is provided
+            if generator is not None:
+                kwargs['generator'] = generator
+            
+            result = pipeline(**kwargs)
             
             if hasattr(result, 'images') and len(result.images) > 0:
                 image = result.images[0]
