@@ -41,6 +41,7 @@ public static class ExportManager
         sb.AppendLine("</head>\n<body>");
         sb.AppendLine($"<h1>TransformersSharp Benchmark Report</h1>");
         sb.AppendLine($"<p><em>Generated: {timestamp:yyyy-MM-dd HH:mm:ss}</em></p>");
+        // Configuration
         sb.AppendLine("<h2>Configuration</h2><ul>");
         sb.AppendLine($"<li>Model: {System.Net.WebUtility.HtmlEncode(ProgramModelName())}</li>");
         sb.AppendLine($"<li>Image Size: {ProgramImageSize()}x{ProgramImageSize()} px</li>");
@@ -48,10 +49,32 @@ public static class ExportManager
         sb.AppendLine($"<li>.NET Version: {System.Environment.Version}</li>");
         sb.AppendLine($"<li>OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}</li>");
         sb.AppendLine("</ul>");
+        // Summary
+        sb.AppendLine("<h2>Summary</h2><ul>");
+        double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
+        double gpuTotal = gpuResults.Sum(r => r.TimeTakenSeconds);
+        sb.AppendLine($"<li>Total CPU Time: {cpuTotal:F2} seconds</li>");
+        sb.AppendLine($"<li>Total GPU Time: {(gpuResults.Any() ? gpuTotal.ToString("F2") : "N/A")} seconds</li>");
+        if (cpuResults.Any() && gpuResults.Any())
+        {
+            double diff = cpuTotal - gpuTotal;
+            string winner = diff > 0 ? "GPU" : "CPU";
+            sb.AppendLine($"<li>{winner} was faster by {Math.Abs(diff):F2} seconds</li>");
+            double percent = (Math.Abs(diff) / Math.Max(cpuTotal, gpuTotal)) * 100;
+            sb.AppendLine($"<li>Performance Improvement: {percent:F1}%</li>");
+        }
+        sb.AppendLine("</ul>");
+        // Aggregate Statistics
+        sb.AppendLine("<h2>Aggregate Statistics</h2><ul>");
+        sb.AppendLine($"<li>CPU Min: {cpuResults.Min(r => r.TimeTakenSeconds):F2} s, Max: {cpuResults.Max(r => r.TimeTakenSeconds):F2} s, Avg: {cpuResults.Average(r => r.TimeTakenSeconds):F2} s</li>");
+        sb.AppendLine($"<li>GPU Min: {(gpuResults.Any() ? gpuResults.Min(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Max: {(gpuResults.Any() ? gpuResults.Max(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Avg: {(gpuResults.Any() ? gpuResults.Average(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s</li>");
+        sb.AppendLine("</ul>");
+        // Test Prompts
         sb.AppendLine("<h2>Test Prompts</h2><ol>");
         for (int i = 0; i < prompts.Length; i++)
             sb.AppendLine($"<li>{System.Net.WebUtility.HtmlEncode(prompts[i])}</li>");
         sb.AppendLine("</ol>");
+        // Results Table
         sb.AppendLine("<h2>Results Table</h2>");
         sb.AppendLine("<table><tr><th>Prompt</th><th>Device</th><th>Time (s)</th><th>Speedup</th><th>Status</th><th>File</th><th>Preview</th></tr>");
         for (int i = 0; i < prompts.Length; i++)
@@ -76,24 +99,6 @@ public static class ExportManager
             }
         }
         sb.AppendLine("</table>");
-        sb.AppendLine("<h2>Aggregate Statistics</h2><ul>");
-        sb.AppendLine($"<li>CPU Min: {cpuResults.Min(r => r.TimeTakenSeconds):F2} s, Max: {cpuResults.Max(r => r.TimeTakenSeconds):F2} s, Avg: {cpuResults.Average(r => r.TimeTakenSeconds):F2} s</li>");
-        sb.AppendLine($"<li>GPU Min: {(gpuResults.Any() ? gpuResults.Min(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Max: {(gpuResults.Any() ? gpuResults.Max(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Avg: {(gpuResults.Any() ? gpuResults.Average(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s</li>");
-        sb.AppendLine("</ul>");
-        sb.AppendLine("<h2>Summary</h2><ul>");
-        double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
-        double gpuTotal = gpuResults.Sum(r => r.TimeTakenSeconds);
-        sb.AppendLine($"<li>Total CPU Time: {cpuTotal:F2} seconds</li>");
-        sb.AppendLine($"<li>Total GPU Time: {(gpuResults.Any() ? gpuTotal.ToString("F2") : "N/A")} seconds</li>");
-        if (cpuResults.Any() && gpuResults.Any())
-        {
-            double diff = cpuTotal - gpuTotal;
-            string winner = diff > 0 ? "GPU" : "CPU";
-            sb.AppendLine($"<li>{winner} was faster by {Math.Abs(diff):F2} seconds</li>");
-            double percent = (Math.Abs(diff) / Math.Max(cpuTotal, gpuTotal)) * 100;
-            sb.AppendLine($"<li>Performance Improvement: {percent:F1}%</li>");
-        }
-        sb.AppendLine("</ul>");
         sb.AppendLine("</body>\n</html>");
         File.WriteAllText(htmlPath, sb.ToString(), Encoding.UTF8);
         return htmlPath;
@@ -134,11 +139,32 @@ public static class ExportManager
         var sb = new StringBuilder();
         sb.AppendLine($"# TransformersSharp Benchmark Report");
         sb.AppendLine($"_Generated: {timestamp:yyyy-MM-dd HH:mm:ss}_\n");
+        // Configuration
         sb.AppendLine($"## Configuration\n- Model: {ProgramModelName()}\n- Image Size: {ProgramImageSize()}x{ProgramImageSize()} px\n- Sample Count: {prompts.Length}\n- .NET Version: {System.Environment.Version}\n- OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}\n");
+        // Summary
+        sb.AppendLine("## Summary");
+        double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
+        double gpuTotal = gpuResults.Sum(r => r.TimeTakenSeconds);
+        sb.AppendLine($"- Total CPU Time: {cpuTotal:F2} seconds");
+        sb.AppendLine($"- Total GPU Time: {(gpuResults.Any() ? gpuTotal.ToString("F2") : "N/A")} seconds");
+        if (cpuResults.Any() && gpuResults.Any())
+        {
+            double diff = cpuTotal - gpuTotal;
+            string winner = diff > 0 ? "GPU" : "CPU";
+            sb.AppendLine($"- {winner} was faster by {Math.Abs(diff):F2} seconds");
+            double percent = (Math.Abs(diff) / Math.Max(cpuTotal, gpuTotal)) * 100;
+            sb.AppendLine($"- Performance Improvement: {percent:F1}%");
+        }
+        sb.AppendLine();
+        // Aggregate Statistics
+        sb.AppendLine($"## Aggregate Statistics\n- CPU Min: {cpuResults.Min(r => r.TimeTakenSeconds):F2} s, Max: {cpuResults.Max(r => r.TimeTakenSeconds):F2} s, Avg: {cpuResults.Average(r => r.TimeTakenSeconds):F2} s");
+        sb.AppendLine($"- GPU Min: {(gpuResults.Any() ? gpuResults.Min(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Max: {(gpuResults.Any() ? gpuResults.Max(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Avg: {(gpuResults.Any() ? gpuResults.Average(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s\n");
+        // Test Prompts
         sb.AppendLine($"## Test Prompts");
         for (int i = 0; i < prompts.Length; i++)
             sb.AppendLine($"{i + 1}. {prompts[i]}");
         sb.AppendLine();
+        // Results Table
         sb.AppendLine("## Results Table");
         sb.AppendLine("| Prompt | Device | Time (s) | Speedup | Status | File |");
         sb.AppendLine("|--------|--------|----------|---------|--------|------|");
@@ -160,22 +186,6 @@ public static class ExportManager
                 string fileLink = !string.IsNullOrEmpty(gpu.FileFullPath) ? $"[{gpu.FileName}]({gpu.FileFullPath})" : "";
                 sb.AppendLine($"| {prompts[i]} | GPU | {gpu.TimeTakenSeconds:F2} | {speedup} | {status} | {fileLink} |");
             }
-        }
-        sb.AppendLine();
-        sb.AppendLine($"## Aggregate Statistics\n- CPU Min: {cpuResults.Min(r => r.TimeTakenSeconds):F2} s, Max: {cpuResults.Max(r => r.TimeTakenSeconds):F2} s, Avg: {cpuResults.Average(r => r.TimeTakenSeconds):F2} s");
-        sb.AppendLine($"- GPU Min: {(gpuResults.Any() ? gpuResults.Min(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Max: {(gpuResults.Any() ? gpuResults.Max(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Avg: {(gpuResults.Any() ? gpuResults.Average(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s\n");
-        sb.AppendLine("## Summary");
-        double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
-        double gpuTotal = gpuResults.Sum(r => r.TimeTakenSeconds);
-        sb.AppendLine($"- Total CPU Time: {cpuTotal:F2} seconds");
-        sb.AppendLine($"- Total GPU Time: {(gpuResults.Any() ? gpuTotal.ToString("F2") : "N/A")} seconds");
-        if (cpuResults.Any() && gpuResults.Any())
-        {
-            double diff = cpuTotal - gpuTotal;
-            string winner = diff > 0 ? "GPU" : "CPU";
-            sb.AppendLine($"- {winner} was faster by {Math.Abs(diff):F2} seconds");
-            double percent = (Math.Abs(diff) / Math.Max(cpuTotal, gpuTotal)) * 100;
-            sb.AppendLine($"- Performance Improvement: {percent:F1}%");
         }
         sb.AppendLine();
         File.WriteAllText(mdPath, sb.ToString(), Encoding.UTF8);
