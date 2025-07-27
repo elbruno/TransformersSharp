@@ -52,101 +52,19 @@ public class ImageGenerator : IDisposable
     {
         DisposePipeline();
 
-        try
+        if (_device == "cuda")
         {
-            if (_device == "cuda")
-            {
-                _pipeline = TextToImagePipeline.FromModel(
-                            model: _model,
-                            device: _device,
-                            torchDtype: TorchDtype.Float16);
-            }
-            else
-            {
-                _pipeline = TextToImagePipeline.FromModel(
-                model: _model,
-                device: _device);
-            }
+            _pipeline = TextToImagePipeline.FromModel(
+                        model: _model,
+                        device: _device,
+                        torchDtype: TorchDtype.Float16);
         }
-        catch (Exception ex) when (IsCompatibilityError(ex))
+        else
         {
-            throw new InvalidOperationException(CreateCompatibilityErrorMessage(ex), ex);
+            _pipeline = TextToImagePipeline.FromModel(
+            model: _model,
+            device: _device);
         }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException(CreateGeneralErrorMessage(ex), ex);
-        }
-    }
-
-    /// <summary>
-    /// Checks if the exception indicates a package compatibility issue.
-    /// </summary>
-    private static bool IsCompatibilityError(Exception ex)
-    {
-        var message = ex.Message;
-        return message.Contains("DLL load failed") ||
-               message.Contains("diffusers") ||
-               message.Contains("_C") ||
-               message.Contains("xFormers") ||
-               message.Contains("package compatibility");
-    }
-
-    /// <summary>
-    /// Creates a detailed error message for compatibility issues.
-    /// </summary>
-    private string CreateCompatibilityErrorMessage(Exception ex)
-    {
-        return $@"
-❌ Text-to-image pipeline creation failed due to package compatibility issues.
-
-PROBLEM: The current PyTorch and diffusers installation has compatibility issues.
-This commonly occurs when:
-- CPU-only PyTorch is mixed with CUDA-compiled extensions
-- Package versions are incompatible
-- Missing system dependencies (Visual C++ Redistributables on Windows)
-
-CURRENT SETUP ISSUES:
-{ex.Message}
-
-SOLUTIONS:
-🔧 Option 1 - Reinstall compatible packages (Recommended):
-1. pip uninstall torch torchvision torchaudio diffusers xformers -y
-2. pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-3. pip install diffusers --no-deps && pip install safetensors accelerate
-4. Restart your application
-
-🔧 Option 2 - Install CUDA version (if you have NVIDIA GPU):
-1. Ensure NVIDIA drivers are installed
-2. Run: TransformerEnvironment.InstallCudaPyTorch()
-3. Restart your application
-
-For more help, see: https://pytorch.org/get-started/locally/";
-    }
-
-    /// <summary>
-    /// Creates a detailed error message for general pipeline creation issues.
-    /// </summary>
-    private string CreateGeneralErrorMessage(Exception ex)
-    {
-        return $@"
-❌ Failed to create text-to-image pipeline.
-
-ERROR: {ex.Message}
-
-POSSIBLE CAUSES:
-- Network connectivity issues during model download
-- Insufficient disk space (models can be several GB)
-- Model unavailable or access restricted
-- Invalid model name: '{_model}'
-
-SOLUTIONS:
-1. Check your internet connection
-2. Ensure sufficient disk space (at least 5GB free)
-3. Try a different model name
-4. Verify the model exists at: https://huggingface.co/{_model}
-
-If the problem persists, try using a well-known model like:
-'stabilityai/stable-diffusion-2-1-base' or 'runwayml/stable-diffusion-v1-5'";
     }
 
     /// <summary>

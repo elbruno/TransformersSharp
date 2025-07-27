@@ -12,9 +12,20 @@ namespace Demo10_text_to_image_benchmark
     {
         private static readonly string[] SamplePrompts =
         {
-            "A pixelated image of a beaver in Canada."
-            // "A futuristic city skyline at sunset.",
-            // "A cat riding a skateboard in a park.",
+            "A pixelated image of a beaver in Canada.",
+            "A futuristic city skyline at sunset.",
+            "A cat riding a skateboard in a park.",
+            "A surreal landscape with floating islands and waterfalls.",
+            "A robot painting a portrait of a human.",
+            "A fantasy castle surrounded by a magical forest.",
+            "A vintage car driving through a neon-lit street.",
+            "A cozy cabin in the mountains during winter.",
+            "A dragon flying over a medieval village.",
+            "A space scene with planets and stars in the background.",
+            "A close-up of a flower with dew drops on its petals.",
+            "A whimsical underwater scene with colorful fish and coral.",
+            "A steampunk-inspired airship sailing through the clouds.",
+            "A futuristic robot serving coffee in a cafe."
         };
 
         private static readonly List<ImageGenerationResult> CpuResults = new();
@@ -24,6 +35,7 @@ namespace Demo10_text_to_image_benchmark
         {
             Console.WriteLine("=== TransformersSharp Text-to-Image Benchmark - 256x256 Generation ===\n");
             Console.WriteLine("Image size: 256x256 pixels (optimized for performance testing)\n");
+            Console.WriteLine("=== Benchmark Start ===");
 
             PerformCpuTests();
             PerformGpuTests();
@@ -50,6 +62,7 @@ namespace Demo10_text_to_image_benchmark
                     break; // Exit on critical error
                 }
             }
+            Console.WriteLine("----------------------");
         }
 
         /// <summary>
@@ -64,6 +77,7 @@ namespace Demo10_text_to_image_benchmark
             {
                 RunImageGenerationTest(prompt, "cuda", GpuResults);
             }
+            Console.WriteLine("----------------------");
         }
 
         /// <summary>
@@ -85,24 +99,9 @@ namespace Demo10_text_to_image_benchmark
                 results.Add(result);
                 Console.WriteLine($" >> ✅ {device.ToUpper()}: {result.TimeTakenSeconds:F2} seconds, Saved: {result.FileGenerated}");
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("package compatibility"))
-            {
-                Console.WriteLine($">> ❌ {device.ToUpper()} test failed due to package compatibility issues:");
-                Console.WriteLine($"   {ex.Message}");
-                Console.WriteLine();
-                Console.WriteLine("   🚨 CRITICAL: Cannot continue with current Python package installation.");
-                Console.WriteLine("   Please follow the solution steps above to fix the installation.");
-                Console.WriteLine();
-                return true; // Critical error - stop testing
-            }
             catch (Exception ex)
             {
                 Console.WriteLine($">> ❌ {device.ToUpper()} test failed: {ex.Message}");
-                if (ex.Message.Contains("DLL load failed") || ex.Message.Contains("_C"))
-                {
-                    Console.WriteLine("   This appears to be a package compatibility issue.");
-                    Console.WriteLine("   Try reinstalling PyTorch and diffusers with compatible versions.");
-                }
             }
 
             Console.WriteLine(" >> image generation complete");
