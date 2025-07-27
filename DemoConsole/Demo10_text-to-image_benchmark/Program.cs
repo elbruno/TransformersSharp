@@ -23,12 +23,12 @@ internal class Program
         SamplePrompts = [.. SamplePrompts.Where(p => !string.IsNullOrWhiteSpace(p) && !p.StartsWith("#"))];
         SamplePrompts = [.. SamplePrompts.OrderBy(x => random.Next()).Take(sampleCount)];
 
-        //PerformCpuTests();
-        //PerformGpuTests();
+        PerformCpuTests();
+        PerformGpuTests();
 
         // Use mock data for export testing
-        MockDataGenerator.GenerateMockCpuResults(CpuResults, SamplePrompts!);
-        MockDataGenerator.GenerateMockGpuResults(GpuResults, SamplePrompts!);
+        //MockDataGenerator.GenerateMockCpuResults(CpuResults, SamplePrompts!);
+        //MockDataGenerator.GenerateMockGpuResults(GpuResults, SamplePrompts!);
 
         var allResults = CpuResults.Concat(GpuResults).ToList();
         var exportPaths = BenchmarkReportManager.ExportAll(allResults, SamplePrompts!, CpuResults, GpuResults);
