@@ -84,8 +84,11 @@ public class TextToImagePipeline : Pipeline
     /// <param name="guidanceScale">Guidance scale for generation (default: 7.5)</param>
     /// <param name="height">Height of generated image (default: 512)</param>
     /// <param name="width">Width of generated image (default: 512)</param>
+    /// <param name="maxSequenceLength">Maximum sequence length for FLUX models (default: null)</param>
+    /// <param name="seed">Random seed for reproducible generation (default: null)</param>
+    /// <param name="enableModelCpuOffload">Enable CPU offloading for memory optimization (default: false)</param>
     /// <returns>Generated image result containing image bytes and dimensions</returns>
-    public ImageGenerationResult Generate(string prompt, int numInferenceSteps = 50, float guidanceScale = 7.5f, int height = 512, int width = 512)
+    public ImageGenerationResult Generate(string prompt, int numInferenceSteps = 50, float guidanceScale = 7.5f, int height = 512, int width = 512, int? maxSequenceLength = null, int? seed = null, bool enableModelCpuOffload = false)
     {
         var imageBuffer = TransformerEnvironment.TransformersWrapper.InvokeTextToImagePipeline(
             PipelineObject,
@@ -93,7 +96,10 @@ public class TextToImagePipeline : Pipeline
             numInferenceSteps,
             guidanceScale,
             height,
-            width);
+            width,
+            maxSequenceLength,
+            seed,
+            enableModelCpuOffload);
 
         return new ImageGenerationResult
         {

@@ -16,13 +16,13 @@ Console.WriteLine("✅ Pipeline created successfully");
 Console.WriteLine($"Using device: {pipeline.DeviceType}");
 Console.WriteLine();
 
-Console.WriteLine("Generating image...");
+Console.WriteLine("Generating 256x256 image...");
 var result = pipeline.Generate(
     "A pixelated image of a beaver in Canada",
     numInferenceSteps: 30,
     guidanceScale: 7.5f,
-    height: 512,
-    width: 512);
+    height: 256,  // Updated to 256x256
+    width: 256);  // Updated to 256x256
 
 Console.WriteLine("✅ Image generation completed");
 Console.WriteLine();
@@ -32,9 +32,9 @@ var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 var folderPath = Path.Combine(desktopPath, "TransformersSharpImages");
 Directory.CreateDirectory(folderPath);
 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-var filename = $"image_{pipeline!.DeviceType}_{timestamp}.png";
+var filename = $"image_{pipeline!.DeviceType}_{timestamp}_256x256.png";
 var destinationPath = Path.Combine(folderPath, filename);
 File.WriteAllBytes(destinationPath, result.ImageBytes);
 
 Console.WriteLine($"✅ Image saved successfully to: {destinationPath}");
-Console.WriteLine($"📷 Image size: {result.ImageBytes.Length} bytes");
+Console.WriteLine($"📷 Image size: {result.ImageBytes.Length} bytes (256x256 pixels)");

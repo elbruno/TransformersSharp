@@ -10,15 +10,16 @@ TransformersSharp automatically detects and configures the appropriate pipeline 
 - **Model**: `kandinsky-community/kandinsky-2-2-decoder`
 - **Pipeline**: KandinskyV22Pipeline
 - **Use Case**: Artistic style generation with unique aesthetic, now the default for balanced performance
-- **Image Size**: 512x512 pixels (recommended)
+- **Default Size**: 256x256 pixels (optimized for performance, can be customized)
 
 ### FLUX.1-dev
 - **Model**: `black-forest-labs/FLUX.1-dev`
 - **Pipeline**: FluxPipeline (with AutoPipeline fallback)
 - **Use Case**: State-of-the-art text-to-image generation with high quality and prompt adherence
-- **Image Size**: 1024x1024 pixels (recommended)
+- **Default Size**: 256x256 pixels (can be increased to 1024x1024 for maximum quality)
 - **Note**: Requires HuggingFace token and model access approval
 - **Authentication**: Gated model requiring HuggingFace login
+- **Advanced Features**: Supports max_sequence_length, seed for reproducibility, and CPU offloading
 
 ## Architecture
 
@@ -48,7 +49,9 @@ var result = pipeline.Generate("A beautiful sunset over mountains");
 File.WriteAllBytes("sunset.png", result.ImageBytes);
 ```
 
-### Advanced Configuration
+### Advanced FLUX.1-dev Configuration
+
+FLUX.1-dev supports additional parameters for enhanced control and reproducibility:
 
 ```csharp
 using TransformersSharp;
@@ -63,13 +66,16 @@ var pipeline = TextToImagePipeline.FromModel(
     huggingFaceToken: "your_hf_token_here"  // Required for gated models
 );
 
-// Generate with custom parameters
+// Generate with FLUX-optimized parameters
 var result = pipeline.Generate(
     prompt: "A futuristic cityscape with flying cars",
-    numInferenceSteps: 20,          // FLUX uses fewer steps efficiently
-    guidanceScale: 3.5f,            // FLUX uses lower guidance scale
-    height: 1024,                   // FLUX's native resolution
-    width: 1024                     // FLUX's native resolution
+    numInferenceSteps: 50,          // FLUX recommended steps (vs 20 in old docs)
+    guidanceScale: 3.5f,            // FLUX optimized guidance scale
+    height: 256,                    // Default optimized size (can go up to 1024)
+    width: 256,                     // Default optimized size (can go up to 1024)
+    maxSequenceLength: 512,         // FLUX-specific parameter for prompt processing
+    seed: 42,                       // For reproducible results
+    enableModelCpuOffload: true     // Memory optimization
 );
 
 Console.WriteLine($"Generated {result.Width}x{result.Height} image");
@@ -77,7 +83,7 @@ Console.WriteLine($"Generated {result.Width}x{result.Height} image");
 
 ### HuggingFace Authentication
 
-For gated models like FLUX.1-dev, you need to authenticate with HuggingFace:
+For gated models like FLUX.1-dev, you need to authenticate with HuggingFace. TransformersSharp supports multiple authentication methods:
 
 ```csharp
 // Method 1: Pass token directly to pipeline
@@ -93,6 +99,10 @@ var pipeline = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
 // Method 3: Environment variable (recommended for security)
 // Set HF_TOKEN or HUGGINGFACE_TOKEN environment variable
 // The pipeline will automatically use it when provided
+
+// Method 4: User Secrets (recommended for development)
+// Use dotnet user-secrets for secure local development
+// dotnet user-secrets set "HF_TOKEN" "your_token_here"
 ```
 
 #### Getting a HuggingFace Token
@@ -102,11 +112,35 @@ var pipeline = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
 3. Request access to gated models at their model pages (e.g., [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev))
 4. Wait for approval (usually automatic for FLUX.1-dev)
 
-#### Security Best Practices
+#### User Secrets for Development
+
+For secure local development, use .NET User Secrets:
+
+```bash
+# Set token using User Secrets (recommended for development)
+dotnet user-secrets set "HF_TOKEN" "your_token_here"
+
+# Or use the alternative key
+dotnet user-secrets set "HUGGINGFACE_TOKEN" "your_token_here"
+```
+
+Then in your application:
 
 ```csharp
-// Use environment variables instead of hardcoding tokens
-var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN");
+using Microsoft.Extensions.Configuration;
+
+// Build configuration to read from multiple sources
+var config = new ConfigurationBuilder()
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>()  // Add user secrets support
+    .Build();
+
+// Check for token from multiple sources
+var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN") ?? 
+              Environment.GetEnvironmentVariable("HUGGINGFACE_TOKEN") ??
+              config["HF_TOKEN"] ??
+              config["HUGGINGFACE_TOKEN"];
+
 if (!string.IsNullOrEmpty(hfToken))
 {
     var pipeline = TextToImagePipeline.FromModel(
@@ -114,31 +148,27 @@ if (!string.IsNullOrEmpty(hfToken))
         huggingFaceToken: hfToken
     );
 }
-else
-{
-    Console.WriteLine("Please set HF_TOKEN environment variable");
-}
 ```
 
-### Using ImageGenerator (Recommended)
+### Using ImageGenerator (Recommended for Benchmarking)
 
-The `ImageGenerator` class provides a high-level interface with automatic pipeline management:
+The `ImageGenerator` class in `Demo10_text-to-image_benchmark` provides a high-level interface with automatic pipeline management and performance testing:
 
 ```csharp
-using DemoConsole.ConsoleApp4;
+using Demo10_text_to_image_benchmark;
 
-// Create generator with custom settings
-var settings = new ImageGenerator.ImageGenerationSettings
+// Create generator with custom settings optimized for performance
+var settings = new ImageGenerationSettings
 {
     NumInferenceSteps = 30,
-    GuidanceScale = 8.0f,
-    Height = 512,
-    Width = 512,
+    GuidanceScale = 7.5f,
+    Height = 256,          // Optimized default size
+    Width = 256,           // Optimized default size
     OutputFolder = @"C:\MyImages"
 };
 
 using var generator = new ImageGenerator(
-    model: "stable-diffusion-v1-5/stable-diffusion-v1-5",
+    model: "kandinsky-community/kandinsky-2-2-decoder",  // Default model
     device: "cuda",
     settings: settings
 );
@@ -191,25 +221,30 @@ else
 }
 ```
 
-### Generation Parameters
+### Performance Optimization
+
+All TransformersSharp demos now use 256x256 pixel images by default for optimal performance. You can customize this for your specific use case:
 
 ```csharp
-// Fast generation (lower quality)
+// Fast generation (default optimized settings)
 var quick = pipeline.Generate(
     prompt: "A simple sketch of a house",
-    numInferenceSteps: 10,      // Fewer steps = faster
-    guidanceScale: 3.0f,        // Lower guidance = faster (FLUX-optimized)
-    height: 512,                // Smaller size = faster
-    width: 512
+    numInferenceSteps: 20,      // Optimized for speed
+    guidanceScale: 3.5f,        // FLUX-optimized guidance
+    height: 256,                // Default optimized size
+    width: 256,                 // Default optimized size
+    seed: 42                    // Reproducible results
 );
 
-// High quality generation (slower)
+// High quality generation (larger output)
 var detailed = pipeline.Generate(
     prompt: "A highly detailed oil painting of a Victorian mansion",
-    numInferenceSteps: 30,      // More steps = better quality (FLUX-optimized)
-    guidanceScale: 4.0f,        // Higher guidance = more detailed (FLUX-optimized)
-    height: 1024,               // Larger size = more detail
-    width: 1024
+    numInferenceSteps: 50,      // More steps for FLUX quality
+    guidanceScale: 3.5f,        // FLUX-optimized guidance
+    height: 1024,               // Increase for maximum detail
+    width: 1024,                // Increase for maximum detail
+    maxSequenceLength: 512,     // FLUX-specific prompt processing
+    enableModelCpuOffload: true // Memory optimization
 );
 ```
 
@@ -339,12 +374,13 @@ Console.WriteLine($"CUDA Available: {deviceInfo.CudaAvailable}");
 
 2. **Out of Memory (CUDA)**
    ```csharp
-   // Reduce image size or use CPU
+   // Use optimized defaults or reduce image size further
    var result = pipeline.Generate(
        "Your prompt",
-       height: 256,  // Smaller size
+       height: 256,  // Optimized default size
        width: 256,
-       numInferenceSteps: 20  // Fewer steps
+       numInferenceSteps: 20,     // Balanced steps
+       enableModelCpuOffload: true // Enable CPU offloading for memory
    );
    ```
 

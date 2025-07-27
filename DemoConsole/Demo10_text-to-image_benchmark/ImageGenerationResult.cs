@@ -1,4 +1,4 @@
-namespace ConsoleApp4;
+namespace Demo10_text_to_image_benchmark;
 
 public class ImageGenerationResult
 {

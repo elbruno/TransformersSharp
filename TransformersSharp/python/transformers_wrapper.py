@@ -759,7 +759,10 @@ def invoke_text_to_image_pipeline(
     num_inference_steps: Optional[int] = 50,
     guidance_scale: Optional[float] = 7.5,
     height: Optional[int] = 512,
-    width: Optional[int] = 512
+    width: Optional[int] = 512,
+    max_sequence_length: Optional[int] = None,
+    seed: Optional[int] = None,
+    enable_model_cpu_offload: bool = False
 ) -> Buffer:
     """
     Invoke a text-to-image pipeline.
@@ -771,6 +774,9 @@ def invoke_text_to_image_pipeline(
         guidance_scale: Guidance scale for generation
         height: Height of generated image
         width: Width of generated image
+        max_sequence_length: Maximum sequence length for FLUX models
+        seed: Random seed for reproducible generation
+        enable_model_cpu_offload: Enable CPU offloading for memory optimization
     Returns:
         The generated image as bytes
     """
@@ -778,6 +784,19 @@ def invoke_text_to_image_pipeline(
     import warnings
     from io import BytesIO
     import numpy as np
+    import torch
+    
+    # Enable CPU offloading if requested
+    if enable_model_cpu_offload and hasattr(pipeline, 'enable_model_cpu_offload'):
+        pipeline.enable_model_cpu_offload()
+    
+    # Setup generator for reproducible results
+    generator = None
+    if seed is not None:
+        device = getattr(pipeline, 'device', 'cpu')
+        if hasattr(device, 'type'):
+            device = device.type
+        generator = torch.Generator(device).manual_seed(seed)
     
     # Generate image based on pipeline type
     with warnings.catch_warnings():
@@ -809,46 +828,74 @@ def invoke_text_to_image_pipeline(
                 ).to_tuple()
                 
                 # Use the decoder pipeline with the embeddings
-                result = pipeline(
-                    image_embeds=image_embeds,
-                    negative_image_embeds=negative_image_embeds,
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    height=height,
-                    width=width
-                )
+                kwargs = {
+                    'image_embeds': image_embeds,
+                    'negative_image_embeds': negative_image_embeds,
+                    'num_inference_steps': num_inference_steps,
+                    'guidance_scale': guidance_scale,
+                    'height': height,
+                    'width': width
+                }
+                
+                # Add generator if seed is provided
+                if generator is not None:
+                    kwargs['generator'] = generator
+                
+                result = pipeline(**kwargs)
                 image = result.images[0]
                 
             except Exception as e:
                 # Fallback: try to handle as a regular diffusers pipeline
-                result = pipeline(
-                    text, 
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    height=height,
-                    width=width
-                )
+                kwargs = {
+                    'prompt': text,
+                    'num_inference_steps': num_inference_steps,
+                    'guidance_scale': guidance_scale,
+                    'height': height,
+                    'width': width
+                }
+                
+                # Add generator if seed is provided
+                if generator is not None:
+                    kwargs['generator'] = generator
+                
+                result = pipeline(**kwargs)
                 image = result.images[0] if hasattr(result, 'images') else result
                 
         elif hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
             # This is a diffusers pipeline
-            result = pipeline(
-                text, 
-                num_inference_steps=num_inference_steps,
-                guidance_scale=guidance_scale,
-                height=height,
-                width=width
-            )
+            kwargs = {
+                'prompt': text,
+                'num_inference_steps': num_inference_steps,
+                'guidance_scale': guidance_scale,
+                'height': height,
+                'width': width
+            }
+            
+            # Add generator if seed is provided
+            if generator is not None:
+                kwargs['generator'] = generator
+                
+            # Add max_sequence_length for FLUX models
+            if max_sequence_length is not None and 'flux' in pipeline.__class__.__name__.lower():
+                kwargs['max_sequence_length'] = max_sequence_length
+            
+            result = pipeline(**kwargs)
             image = result.images[0]
         else:
             # This is a transformers pipeline
-            result = pipeline(
-                text, 
-                num_inference_steps=num_inference_steps,
-                guidance_scale=guidance_scale,
-                height=height,
-                width=width
-            )
+            kwargs = {
+                'prompt': text,
+                'num_inference_steps': num_inference_steps,
+                'guidance_scale': guidance_scale,
+                'height': height,
+                'width': width
+            }
+            
+            # Add generator if seed is provided
+            if generator is not None:
+                kwargs['generator'] = generator
+            
+            result = pipeline(**kwargs)
             
             if hasattr(result, 'images') and len(result.images) > 0:
                 image = result.images[0]
