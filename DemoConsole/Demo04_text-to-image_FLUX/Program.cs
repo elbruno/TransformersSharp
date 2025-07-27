@@ -18,7 +18,7 @@ var config = new ConfigurationBuilder()
     .Build();
 
 // Check for HuggingFace token from multiple sources
-var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN") ?? 
+var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN") ??
               Environment.GetEnvironmentVariable("HUGGINGFACE_TOKEN") ??
               config["HF_TOKEN"] ??
               config["HUGGINGFACE_TOKEN"];
@@ -48,10 +48,10 @@ Console.WriteLine("Creating text-to-image pipeline with authentication...");
 try
 {
     var pipeline = TextToImagePipeline.FromModel(
-        model: model, 
-        device: "cuda", 
+        model: model,
+        device: "cuda",
         huggingFaceToken: hfToken);
-    
+
     Console.WriteLine("✅ Pipeline created successfully");
     Console.WriteLine($"Using device: {pipeline.DeviceType}");
     Console.WriteLine();
@@ -59,13 +59,13 @@ try
     Console.WriteLine("Generating 256x256 image with FLUX.1-dev optimized settings...");
     var result = pipeline.Generate(
         "A majestic dragon flying over a medieval castle at sunset",
-        numInferenceSteps: 50,           // FLUX recommended steps
+        numInferenceSteps: 10,           // FLUX recommended 50 steps
         guidanceScale: 3.5f,             // FLUX optimized guidance
         height: 256,                     // Updated to 256x256
         width: 256,                      // Updated to 256x256
         maxSequenceLength: 512,          // FLUX specific parameter
         seed: 0,                         // For reproducible results
-        enableModelCpuOffload: true);    // Memory optimization
+        enableModelCpuOffload: false);    // Memory optimization
 
     Console.WriteLine("✅ Image generation completed");
     Console.WriteLine();
