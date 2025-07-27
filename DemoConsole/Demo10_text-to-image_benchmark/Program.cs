@@ -13,7 +13,7 @@ namespace Demo10_text_to_image_benchmark
         private static int ImageSize = 128; // Fixed image size for benchmarking
         private static string model = "kandinsky-community/kandinsky-2-2-decoder";
 
-        private static string[] SamplePrompts;
+        private static string[]? SamplePrompts;
         private static readonly List<ImageGenerationResult> CpuResults = new();
         private static readonly List<ImageGenerationResult> GpuResults = new();
 
@@ -32,7 +32,27 @@ namespace Demo10_text_to_image_benchmark
             PerformCpuTests();
             PerformGpuTests();
 
-            SaveResultsToCsv();
+            // Get default output folder from ImageGenerator settings
+            string outputFolder = GetDefaultOutputFolder();
+            var firstResult = CpuResults.FirstOrDefault() ?? GpuResults.FirstOrDefault();
+
+            if (firstResult != null && !string.IsNullOrEmpty(firstResult.FileFullPath))
+            {
+                var folder = Path.GetDirectoryName(firstResult.FileFullPath);
+                if (!string.IsNullOrEmpty(folder))
+                    outputFolder = folder;
+            }
+
+            // Use a single timestamp for both files
+            DateTime exportTimestamp = DateTime.Now;
+            var allResults = CpuResults.Concat(GpuResults).ToList();
+            var csvPath = ExportManager.ExportToCsv(allResults, outputFolder, exportTimestamp);
+            var mdPath = ExportManager.ExportToMarkdown(CpuResults, GpuResults, SamplePrompts, outputFolder, exportTimestamp);
+
+            if (!string.IsNullOrEmpty(csvPath))
+                Console.WriteLine($"CSV results saved to: {csvPath}");
+            if (!string.IsNullOrEmpty(mdPath))
+                Console.WriteLine($"Markdown report saved to: {mdPath}");
 
             DisplayPerformanceComparison();
             DisplayTestExecutionSummary();
@@ -40,34 +60,16 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("=== Benchmark Complete ===");
         }
 
-
-        /// <summary>
-        /// Saves all image generation results to a CSV file.
-        /// </summary>
-        private static void SaveResultsToCsv()
+        // Helper to get the default output folder from ImageGenerator settings
+        private static string GetDefaultOutputFolder()
         {
-            var allResults = CpuResults.Concat(GpuResults).ToList();
-            if (allResults.Count == 0)
-                return;
-
-            var desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            var csvPath = Path.Combine(desktopPath, $"TransformersSharp_Benchmark_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-
-            using (var writer = new StreamWriter(csvPath))
-            {
-                writer.WriteLine("Prompt,Width,Height,FileName,FileFullPath,TimeTakenSeconds,DeviceType");
-                foreach (var r in allResults)
-                {
-                    string safePrompt = r.Prompt?.Replace("\"", "\"\"") ?? string.Empty;
-                    string safeFileName = r.FileName?.Replace("\"", "\"\"") ?? string.Empty;
-                    string safeFileFullPath = r.FileFullPath?.Replace("\"", "\"\"") ?? string.Empty;
-                    string safeDeviceType = r.DeviceType?.Replace("\"", "\"\"") ?? string.Empty;
-                    writer.WriteLine($"\"{safePrompt}\",{r.Width},{r.Height},\"{safeFileName}\",\"{safeFileFullPath}\",{r.TimeTakenSeconds},{safeDeviceType}");
-                }
-            }
-            Console.WriteLine($"CSV results saved to: {csvPath}");
-
+            // Use the same logic as ImageGenerator.ImageGenerationSettings
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TransformersSharpImages");
         }
+
+
+
+
 
 
         /// <summary>
@@ -78,7 +80,7 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("----------------------");
             Console.WriteLine("--- CPU Generation ---");
 
-            foreach (var prompt in SamplePrompts)
+            foreach (var prompt in SamplePrompts!)
             {
                 RunImageGenerationTest(prompt, "cpu", CpuResults);
             }
@@ -93,7 +95,7 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("----------------------");
             Console.WriteLine("--- GPU (CUDA) Generation ---");
 
-            foreach (var prompt in SamplePrompts)
+            foreach (var prompt in SamplePrompts!)
             {
                 RunImageGenerationTest(prompt, "cuda", GpuResults);
             }
@@ -166,7 +168,7 @@ namespace Demo10_text_to_image_benchmark
         /// </summary>
         private static void DisplayDetailedComparison()
         {
-            for (int i = 0; i < SamplePrompts.Length; i++)
+            for (int i = 0; i < SamplePrompts!.Length; i++)
             {
                 var cpuTime = CpuResults.Count > i ? CpuResults[i].TimeTakenSeconds : double.NaN;
                 var gpuTime = GpuResults.Count > i ? GpuResults[i].TimeTakenSeconds : double.NaN;
@@ -194,7 +196,7 @@ namespace Demo10_text_to_image_benchmark
         private static void DisplayCpuOnlyResults()
         {
             Console.WriteLine("GPU tests were skipped - no performance comparison available");
-            Console.WriteLine($"CPU completed {CpuResults.Count} out of {SamplePrompts.Length} tests");
+            Console.WriteLine($"CPU completed {CpuResults.Count} out of {SamplePrompts!.Length} tests");
         }
 
         /// <summary>
@@ -246,8 +248,8 @@ namespace Demo10_text_to_image_benchmark
         {
             Console.WriteLine("==============================");
             Console.WriteLine("--- Test Execution Summary ---");
-            Console.WriteLine($"CPU Tests Completed: {CpuResults.Count}/{SamplePrompts.Length}");
-            Console.WriteLine($"GPU Tests Completed: {GpuResults.Count}/{SamplePrompts.Length}");
+            Console.WriteLine($"CPU Tests Completed: {CpuResults.Count}/{SamplePrompts!.Length}");
+            Console.WriteLine($"GPU Tests Completed: {GpuResults.Count}/{SamplePrompts!.Length}");
 
             if (CpuResults.Count > 0)
             {
