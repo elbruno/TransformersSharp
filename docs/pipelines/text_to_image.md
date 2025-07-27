@@ -51,7 +51,7 @@ File.WriteAllBytes("sunset.png", result.ImageBytes);
 
 ### Advanced FLUX.1-dev Configuration
 
-FLUX.1-dev supports additional parameters for enhanced control and reproducibility:
+FLUX.1-dev supports additional parameters for enhanced control and reproducibility. The implementation follows the official FLUX.1-dev sample code pattern with optimizations:
 
 ```csharp
 using TransformersSharp;
@@ -66,20 +66,29 @@ var pipeline = TextToImagePipeline.FromModel(
     huggingFaceToken: "your_hf_token_here"  // Required for gated models
 );
 
-// Generate with FLUX-optimized parameters
+// Generate with FLUX-optimized parameters (following official sample code)
 var result = pipeline.Generate(
-    prompt: "A futuristic cityscape with flying cars",
-    numInferenceSteps: 50,          // FLUX recommended steps (vs 20 in old docs)
+    prompt: "A cat holding a sign that says hello world",  // Sample from FLUX.1-dev docs
+    numInferenceSteps: 50,          // FLUX recommended steps (as per official sample)
     guidanceScale: 3.5f,            // FLUX optimized guidance scale
     height: 256,                    // Default optimized size (can go up to 1024)
     width: 256,                     // Default optimized size (can go up to 1024)
     maxSequenceLength: 512,         // FLUX-specific parameter for prompt processing
-    seed: 42,                       // For reproducible results
-    enableModelCpuOffload: true     // Memory optimization
+    seed: 0,                        // For reproducible results (matches sample code)
+    enableModelCpuOffload: true     // Memory optimization (GPU-aware CPU offloading)
 );
 
 Console.WriteLine($"Generated {result.Width}x{result.Height} image");
 ```
+
+#### FLUX.1-dev Implementation Details
+
+The FLUX.1-dev implementation follows the official HuggingFace sample code:
+
+- **torch.bfloat16**: Automatically set for CUDA devices for optimal performance
+- **CPU offloading**: Only enabled when GPU is available (follows sample pattern)
+- **CPU generator**: Uses CPU-based random generator for reproducible results across devices
+- **Optimized parameters**: Default values match the official FLUX.1-dev recommendations
 
 ### HuggingFace Authentication
 
@@ -244,7 +253,26 @@ var detailed = pipeline.Generate(
     height: 1024,               // Increase for maximum detail
     width: 1024,                // Increase for maximum detail
     maxSequenceLength: 512,     // FLUX-specific prompt processing
-    enableModelCpuOffload: true // Memory optimization
+    enableModelCpuOffload: true // Memory optimization (GPU-aware)
+);
+```
+
+#### GPU-Aware CPU Offloading
+
+The `enableModelCpuOffload` parameter implements intelligent GPU detection:
+
+```csharp
+// For FLUX.1-dev: CPU offloading only enabled when GPU is available
+// This follows the official sample code pattern from HuggingFace
+var fluxPipeline = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
+
+// CPU offloading will only be applied if:
+// 1. enableModelCpuOffload is true
+// 2. CUDA GPU is available and accessible
+// 3. Pipeline supports the enable_model_cpu_offload() method
+var result = fluxPipeline.Generate(
+    "A majestic dragon",
+    enableModelCpuOffload: true  // Smart GPU detection built-in
 );
 ```
 

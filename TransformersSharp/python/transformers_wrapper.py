@@ -418,15 +418,27 @@ def _create_text_to_image_pipeline(model: Optional[str], torch_dtype, device: st
         # Use model-specific pipeline based on the model identifier
         pipeline_class, pipeline_kwargs = _get_pipeline_for_model(model)
         
+        # Model-specific torch_dtype handling
+        if model and "flux" in model.lower() and ("1-dev" in model.lower() or "1.1-dev" in model.lower()):
+            # FLUX models work best with bfloat16 on CUDA, or float32 on CPU
+            if device == "cuda" and torch.cuda.is_available():
+                torch_dtype = torch.bfloat16
+            else:
+                torch_dtype = torch.float32
+        
         # Common parameters for all pipelines
         common_kwargs = {
             'torch_dtype': torch_dtype,
             **pipeline_kwargs
         }
         
-        # Create and move pipeline to device
+        # Create pipeline
         pipeline = pipeline_class.from_pretrained(model, **common_kwargs)
-        return pipeline.to(device)
+        
+        # Move to device
+        pipeline = pipeline.to(device)
+        
+        return pipeline
         
     except Exception as e:
         raise RuntimeError(_create_pipeline_error_message(str(e)))
@@ -449,16 +461,15 @@ def _get_pipeline_for_model(model: Optional[str]) -> Tuple[Any, Dict[str, Any]]:
         from diffusers import KandinskyV22Pipeline
         return KandinskyV22Pipeline, {}
     
-    # FLUX models
+    # FLUX models - use specific FluxPipeline implementation
     elif "flux" in model_lower and ("1-dev" in model_lower or "1.1-dev" in model_lower):
-        # FLUX models may use different pipeline classes depending on availability
         try:
             from diffusers import FluxPipeline
-            return FluxPipeline, {"torch_dtype": "auto"}
+            return FluxPipeline, {}
         except ImportError:
             # Fallback to AutoPipeline if FluxPipeline is not available
             from diffusers import AutoPipelineForText2Image
-            return AutoPipelineForText2Image, {"torch_dtype": "auto"}
+            return AutoPipelineForText2Image, {}
     
     # Default: try AutoPipelineForText2Image for unknown models
     else:
@@ -776,7 +787,7 @@ def invoke_text_to_image_pipeline(
         width: Width of generated image
         max_sequence_length: Maximum sequence length for FLUX models
         seed: Random seed for reproducible generation
-        enable_model_cpu_offload: Enable CPU offloading for memory optimization
+        enable_model_cpu_offload: Enable CPU offloading for memory optimization (only if GPU available)
     Returns:
         The generated image as bytes
     """
@@ -786,17 +797,24 @@ def invoke_text_to_image_pipeline(
     import numpy as np
     import torch
     
-    # Enable CPU offloading if requested
-    if enable_model_cpu_offload and hasattr(pipeline, 'enable_model_cpu_offload'):
+    # Enable CPU offloading only if GPU is available and requested
+    # This follows the FLUX.1-dev sample code pattern
+    if enable_model_cpu_offload and torch.cuda.is_available() and hasattr(pipeline, 'enable_model_cpu_offload'):
         pipeline.enable_model_cpu_offload()
     
     # Setup generator for reproducible results
     generator = None
     if seed is not None:
-        device = getattr(pipeline, 'device', 'cpu')
-        if hasattr(device, 'type'):
-            device = device.type
-        generator = torch.Generator(device).manual_seed(seed)
+        # For FLUX models, use CPU generator as in the sample code
+        pipeline_class_name = pipeline.__class__.__name__.lower()
+        if "flux" in pipeline_class_name:
+            generator = torch.Generator("cpu").manual_seed(seed)
+        else:
+            # For other models, use device-appropriate generator
+            device = getattr(pipeline, 'device', 'cpu')
+            if hasattr(device, 'type'):
+                device = device.type
+            generator = torch.Generator(device).manual_seed(seed)
     
     # Generate image based on pipeline type
     with warnings.catch_warnings():
@@ -861,8 +879,8 @@ def invoke_text_to_image_pipeline(
                 result = pipeline(**kwargs)
                 image = result.images[0] if hasattr(result, 'images') else result
                 
-        elif hasattr(pipeline, '__call__') and hasattr(pipeline, 'unet'):
-            # This is a diffusers pipeline
+        elif hasattr(pipeline, '__call__') and (hasattr(pipeline, 'unet') or "flux" in pipeline_class_name.lower()):
+            # This is a diffusers pipeline (including FLUX)
             kwargs = {
                 'prompt': text,
                 'num_inference_steps': num_inference_steps,
@@ -876,7 +894,7 @@ def invoke_text_to_image_pipeline(
                 kwargs['generator'] = generator
                 
             # Add max_sequence_length for FLUX models
-            if max_sequence_length is not None and 'flux' in pipeline.__class__.__name__.lower():
+            if max_sequence_length is not None and 'flux' in pipeline_class_name.lower():
                 kwargs['max_sequence_length'] = max_sequence_length
             
             result = pipeline(**kwargs)
