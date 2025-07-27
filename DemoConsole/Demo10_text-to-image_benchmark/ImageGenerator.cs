@@ -20,7 +20,7 @@ public class ImageGenerator : IDisposable
     /// </summary>
     public class ImageGenerationSettings
     {
-        public int NumInferenceSteps { get; set; } = 10;
+        public int NumInferenceSteps { get; set; } = 30;
         public float GuidanceScale { get; set; } = 7.5f;
         public int Height { get; set; } = 256;
         public int Width { get; set; } = 256;
@@ -34,14 +34,14 @@ public class ImageGenerator : IDisposable
     /// <param name="device">The device to run the model on</param>
     /// <param name="settings">Optional generation settings</param>
     public ImageGenerator(
-        string model = "stable-diffusion-v1-5/stable-diffusion-v1-5", 
-        string device = "cpu", 
+        string model = "kandinsky-community/kandinsky-2-2-decoder",
+        string device = "cpu",
         ImageGenerationSettings? settings = null)
     {
         _model = model;
         _device = device;
         _settings = settings ?? new ImageGenerationSettings();
-        
+
         ValidateDeviceAndProvideGuidance();
         CreatePipeline();
     }
@@ -68,13 +68,26 @@ public class ImageGenerator : IDisposable
     private void CreatePipeline()
     {
         DisposePipeline();
-        
+
         try
         {
-            _pipeline = TextToImagePipeline.FromModel(
+
+            if (_device == "cuda")
+            {
+                _pipeline = TextToImagePipeline.FromModel(
+                            model: _model,
+                            device: _device,
+                            torchDtype: TorchDtype.Float16,
+                            silentDeviceFallback: true);
+            }
+            else
+            {
+                _pipeline = TextToImagePipeline.FromModel(
                 model: _model,
                 device: _device,
                 silentDeviceFallback: true);
+            }
+
         }
         catch (Exception ex) when (IsCompatibilityError(ex))
         {
@@ -92,8 +105,8 @@ public class ImageGenerator : IDisposable
     private static bool IsCompatibilityError(Exception ex)
     {
         var message = ex.Message;
-        return message.Contains("DLL load failed") || 
-               message.Contains("diffusers") || 
+        return message.Contains("DLL load failed") ||
+               message.Contains("diffusers") ||
                message.Contains("_C") ||
                message.Contains("xFormers") ||
                message.Contains("package compatibility");
@@ -167,7 +180,7 @@ If the problem persists, try using a well-known model like:
             disposablePipeline.Dispose();
         }
         _pipeline = null;
-        
+
         // Force garbage collection to ensure Python objects are released
         GC.Collect();
         GC.WaitForPendingFinalizers();
@@ -199,7 +212,7 @@ If the problem persists, try using a well-known model like:
         }
 
         EnsureOutputFolder(desiredFolder);
-        
+
         var stopwatch = Stopwatch.StartNew();
         var result = _pipeline!.Generate(
             prompt,
@@ -239,9 +252,10 @@ If the problem persists, try using a well-known model like:
     {
         var folder = desiredFolder ?? _settings.OutputFolder;
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-        var filename = $"image_{_pipeline!.DeviceType}_{timestamp}.png";
+        var safeDeviceType = _pipeline!.DeviceType.Replace(":", "-").Replace("/", "-");
+        var filename = $"image_{safeDeviceType}_{timestamp}.png";
         var filepath = Path.Combine(folder, filename);
-        
+
         File.WriteAllBytes(filepath, imageBytes);
         return filepath;
     }

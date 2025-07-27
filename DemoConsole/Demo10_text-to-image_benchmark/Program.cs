@@ -10,10 +10,9 @@ namespace Demo10_text_to_image_benchmark
     /// </summary>
     internal class Program
     {
-        private static readonly string[] SamplePrompts = 
+        private static readonly string[] SamplePrompts =
         {
             "A pixelated image of a beaver in Canada."
-            // Add more prompts for extended testing
             // "A futuristic city skyline at sunset.",
             // "A cat riding a skateboard in a park.",
         };
@@ -27,26 +26,15 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("Image size: 256x256 pixels (optimized for performance testing)\n");
 
             if (!PerformDiagnosticCheck()) return;
-            
+
             var deviceInfo = PerformDeviceCapabilityCheck();
-            
-            // Demonstrate enhanced model support (optional - comment out for performance testing only)
-            Console.WriteLine("Press 'M' to demonstrate model support, or any other key to skip to performance tests:");
-            var key = Console.ReadKey();
-            Console.WriteLine();
-            
-            if (key.Key == ConsoleKey.M)
-            {
-                ModelSupportExample.DemonstrateModelSupport();
-                Console.WriteLine();
-            }
-            
+
             PerformCpuTests();
             PerformGpuTests(deviceInfo.cudaAvailable);
-            
+
             DisplayPerformanceComparison();
             DisplaySystemInformation();
-            
+
             Console.WriteLine("=== Benchmark Complete ===");
         }
 
@@ -59,9 +47,9 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("=== Diagnostic Check ===");
             try
             {
-                var testModel = "stable-diffusion-v1-5/stable-diffusion-v1-5";
+                var testModel = "kandinsky-community/kandinsky-2-2-decoder";
                 Console.WriteLine($"Testing text-to-image pipeline compatibility...");
-                
+
                 using var testGenerator = new ImageGenerator(model: testModel, device: "cpu");
                 Console.WriteLine("✅ Text-to-image pipeline compatibility check passed");
                 return true;
@@ -100,7 +88,7 @@ namespace Demo10_text_to_image_benchmark
             bool cudaAvailable = TransformerEnvironment.IsCudaAvailable();
 
             Console.WriteLine($"CUDA Available: {(cudaAvailable ? "✅ Yes" : "❌ No")}");
-            
+
             if (cudaAvailable)
             {
                 DisplayCudaInformation(deviceInfo);
@@ -109,7 +97,7 @@ namespace Demo10_text_to_image_benchmark
             {
                 DisplayCudaGuidance();
             }
-            
+
             Console.WriteLine();
             return (cudaAvailable, deviceInfo);
         }
@@ -160,7 +148,7 @@ namespace Demo10_text_to_image_benchmark
         {
             Console.WriteLine("----------------------");
             Console.WriteLine("--- CPU Generation ---");
-            
+
             foreach (var prompt in SamplePrompts)
             {
                 if (RunImageGenerationTest(prompt, "cpu", CpuResults))
@@ -204,7 +192,7 @@ namespace Demo10_text_to_image_benchmark
         {
             Console.WriteLine(" >> start image generation ...");
             Console.WriteLine($" >> Prompt: {prompt}");
-            
+
             try
             {
                 using var generator = new ImageGenerator(device: device);
@@ -231,7 +219,7 @@ namespace Demo10_text_to_image_benchmark
                     Console.WriteLine("   Try reinstalling PyTorch and diffusers with compatible versions.");
                 }
             }
-            
+
             Console.WriteLine(" >> image generation complete");
             Console.WriteLine(" >> ");
             Console.WriteLine();
@@ -268,11 +256,11 @@ namespace Demo10_text_to_image_benchmark
             {
                 var cpuTime = CpuResults.Count > i ? CpuResults[i].TimeTakenSeconds : double.NaN;
                 var gpuTime = GpuResults.Count > i ? GpuResults[i].TimeTakenSeconds : double.NaN;
-                
+
                 Console.WriteLine($"Prompt {i + 1}: {SamplePrompts[i]}");
                 Console.WriteLine($"  CPU: {cpuTime:F2} seconds");
                 Console.WriteLine($"  GPU: {gpuTime:F2} seconds");
-                
+
                 if (!double.IsNaN(cpuTime) && !double.IsNaN(gpuTime))
                 {
                     var diff = cpuTime - gpuTime;
@@ -347,7 +335,7 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine();
             Console.WriteLine("==============================");
             Console.WriteLine("=== System Information ===");
-            
+
             try
             {
                 var systemInfo = TransformerEnvironment.GetDetailedSystemInfo();
@@ -405,13 +393,13 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("--- Test Execution Summary ---");
             Console.WriteLine($"CPU Tests Completed: {CpuResults.Count}/{SamplePrompts.Length}");
             Console.WriteLine($"GPU Tests Completed: {GpuResults.Count}/{SamplePrompts.Length}");
-            
+
             if (CpuResults.Count > 0)
             {
                 var avgCpuTime = CpuResults.Average(r => r.TimeTakenSeconds);
                 Console.WriteLine($"Average CPU Time per Image: {avgCpuTime:F2} seconds");
             }
-            
+
             if (GpuResults.Count > 0)
             {
                 var avgGpuTime = GpuResults.Average(r => r.TimeTakenSeconds);
