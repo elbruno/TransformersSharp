@@ -1,3 +1,4 @@
+using LibreHardwareMonitor.Hardware;
 using System.Globalization;
 using System.Text;
 
@@ -29,68 +30,75 @@ public static class BenchmarkReportManager
         return new ExportResultPaths { CsvPath = csvPath, MarkdownPath = mdPath, HtmlPath = htmlPath };
     }
 
-    private static string GetCpuInfo()
+    // Uses LibreHardwareMonitorLib for hardware info
+    private static Computer? _computer;
+    private static void EnsureComputer()
     {
-        try
+        if (_computer == null)
         {
-            string cpu = "unknown";
-#if WINDOWS
-            using (var searcher = new System.Management.ManagementObjectSearcher("select Name from Win32_Processor"))
+            _computer = new LibreHardwareMonitor.Hardware.Computer
             {
-                foreach (var item in searcher.Get())
-                {
-                    cpu = item["Name"]?.ToString() ?? "unknown";
-                    break;
-                }
-            }
-#else
-            cpu = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString();
-#endif
-            return cpu;
+                IsCpuEnabled = true,
+                IsGpuEnabled = true,
+                IsMemoryEnabled = true
+            };
+            _computer.Open();
         }
-        catch { return "unknown"; }
     }
 
-    private static string GetGpuInfo()
+    public static string GetCpuInfo()
     {
         try
         {
-            string gpu = "unknown";
-#if WINDOWS
-            using (var searcher = new System.Management.ManagementObjectSearcher("select Name from Win32_VideoController"))
+            EnsureComputer();
+            var cpu = _computer?.Hardware.FirstOrDefault(h => h.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Cpu);
+            if (cpu != null)
             {
-                foreach (var item in searcher.Get())
-                {
-                    gpu = item["Name"]?.ToString() ?? "unknown";
-                    break;
-                }
+                cpu.Update();
+                return $"{cpu.Name}";
             }
-#endif
-            return gpu;
         }
-        catch { return "unknown"; }
+        catch { }
+        return "unknown";
     }
 
-    private static string GetRamInfo()
+    public static string GetGpuInfo()
     {
         try
         {
-#if WINDOWS
-            using (var searcher = new System.Management.ManagementObjectSearcher("SELECT Capacity FROM Win32_PhysicalMemory"))
+            EnsureComputer();
+            var gpu = _computer?.Hardware.FirstOrDefault(h => h.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.GpuNvidia || h.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.GpuAmd || h.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.GpuIntel);
+            if (gpu != null)
             {
-                long total = 0;
-                foreach (var item in searcher.Get())
-                {
-                    if (item["Capacity"] != null)
-                        total += Convert.ToInt64(item["Capacity"]);
-                }
-                return $"{(total / (1024 * 1024 * 1024.0)):F1} GB";
+                gpu.Update();
+                return $"{gpu.Name}";
             }
-#else
-            return "unknown";
-#endif
         }
-        catch { return "unknown"; }
+        catch { }
+        return "unknown";
+    }
+
+    public static string GetRamInfo()
+    {
+        try
+        {
+            EnsureComputer();
+            var mem = _computer?.Hardware.FirstOrDefault(h => h.HardwareType == LibreHardwareMonitor.Hardware.HardwareType.Memory);
+            if (mem != null)
+            {
+                mem.Update();
+                // Find total physical memory sensor
+                var totalSensor = mem.Sensors.FirstOrDefault(s => s.SensorType == LibreHardwareMonitor.Hardware.SensorType.Data && s.Name.ToLower().Contains("memory total"));
+                if (totalSensor != null && totalSensor.Value.HasValue)
+                {
+                    // Value is in MB
+                    double gb = totalSensor.Value.Value / 1024.0;
+                    return $"{gb:F1} GB";
+                }
+            }
+        }
+        catch { }
+        return "unknown";
     }
 
     public static void ExportToConsole(IEnumerable<ImageGenerationResult> cpuResults, string[] prompts, IEnumerable<ImageGenerationResult> gpuResults, DateTime timestamp)
