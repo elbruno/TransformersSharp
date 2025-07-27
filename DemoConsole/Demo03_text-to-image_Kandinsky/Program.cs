@@ -6,7 +6,7 @@ var pipeline = TextToImagePipeline.FromModel(model: model, device: "cuda");
 var result = pipeline.Generate(
     "A pixelated image of a beaver in Canada",
     numInferenceSteps: 30,
-    guidanceScale: 7.5f,
+    guidanceScale: 0.75f,
     height: 256,  // Updated to 256x256
     width: 256);  // Updated to 256x256
 

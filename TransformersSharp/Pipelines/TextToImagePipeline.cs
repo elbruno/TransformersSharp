@@ -52,11 +52,18 @@ public class TextToImagePipeline : Pipeline
             TransformerEnvironment.Login(huggingFaceToken);
         }
 
+        // If device is CUDA and torchDtype is not provided, use Float16 by default
+        TorchDtype? resolvedTorchDtype = torchDtype;
+        if (string.Equals(device, "cuda", System.StringComparison.OrdinalIgnoreCase) && torchDtype == null)
+        {
+            resolvedTorchDtype = TorchDtype.Float16;
+        }
+
         return new TextToImagePipeline(TransformerEnvironment.TransformersWrapper.Pipeline(
             "text-to-image",
             model,
             null,
-            torchDtype?.ToString(),
+            resolvedTorchDtype?.ToString(),
             device,
             trustRemoteCode,
             silentDeviceFallback));
@@ -100,6 +107,12 @@ public class TextToImagePipeline : Pipeline
             maxSequenceLength,
             seed,
             enableModelCpuOffload);
+
+        // Debug: Check for empty image buffer
+        if (imageBuffer == null || imageBuffer.Length == 0)
+        {
+            throw new InvalidOperationException("Generated image buffer is empty. Check Python logs for errors.");
+        }
 
         return new ImageGenerationResult
         {

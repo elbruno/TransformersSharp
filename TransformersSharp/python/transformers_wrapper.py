@@ -918,6 +918,19 @@ def invoke_text_to_image_pipeline(
             else:
                 image = result
     
+
+    # Debug: Validate image before converting to bytes
+    if image is None:
+        raise RuntimeError("Image generation failed: image is None")
+    if not hasattr(image, 'save'):
+        raise RuntimeError(f"Image generation failed: result is not a PIL Image, got {type(image)}")
+
+    # Print image properties for debugging
+    try:
+        print(f"[DEBUG] Image mode: {image.mode}, size: {image.size}")
+    except Exception as e:
+        print(f"[DEBUG] Could not get image properties: {e}")
+
     # Convert PIL Image to bytes
     return convert_image_to_bytes(image)
 
