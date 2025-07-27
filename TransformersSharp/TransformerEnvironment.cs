@@ -11,8 +11,19 @@ namespace TransformersSharp
     /// </summary>
     public static class TransformerEnvironment
     {
-        private static readonly IPythonEnvironment? _env;
+        private static IPythonEnvironment? _env;
         private static readonly Lock _setupLock = new();
+        /// <summary>
+        /// Reinitializes the Python environment after Dispose.
+        /// </summary>
+        public static void Reinitialize()
+        {
+            lock (_setupLock)
+            {
+                _env?.Dispose();
+                _env = InitializePythonEnvironment();
+            }
+        }
         private static readonly string[] _coreRequirements =
         {
             "accelerate==1.9.0",

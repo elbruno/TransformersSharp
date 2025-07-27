@@ -29,8 +29,7 @@ namespace TransformersSharp.EnvironmentTest
 
             Console.WriteLine();
             Console.WriteLine("=== Environment Test Complete ===");
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
+            // Removed 'Press any key to exit...' for automated runs
         }
 
         /// <summary>
@@ -193,9 +192,12 @@ namespace TransformersSharp.EnvironmentTest
                             TestResults["cuda_installation_success"] = true;
 
                             // Re-initialize the environment to reload Python and packages
+
                             Console.WriteLine();
-                            Console.WriteLine("� Reloading TransformerEnvironment to refresh CUDA state...");
+                            Console.WriteLine("🔄 Reloading TransformerEnvironment to refresh CUDA state...");
                             TransformerEnvironment.Dispose();
+                            System.Threading.Thread.Sleep(2000);
+                            TransformerEnvironment.Reinitialize();
                             System.Threading.Thread.Sleep(2000);
 
                             // Re-check CUDA availability after installation
