@@ -42,6 +42,8 @@ namespace Demo10_text_to_image_benchmark
                 Console.WriteLine($"CSV results saved to: {exportPaths.CsvPath}");
             if (!string.IsNullOrEmpty(exportPaths.MarkdownPath))
                 Console.WriteLine($"Markdown report saved to: {exportPaths.MarkdownPath}");
+            if (!string.IsNullOrEmpty(exportPaths.HtmlPath))
+                Console.WriteLine($"HTML report saved to: {exportPaths.HtmlPath}");
 
             DisplayPerformanceComparison();
             DisplayTestExecutionSummary();
