@@ -1,6 +1,6 @@
 {
     "github.copilot.enable": {
-        "*": false,
+        "*": true,
         "plaintext": true,
         "markdown": true,
         "scminput": false,
@@ -8,7 +8,9 @@
         "typescript": true,
         "jsonc": true,
         "python": true,
-        "csv": false
+        "csv": false,
+        "chat.tools.autoApprove": true,
+        "chat.agent.maxRequests": 100
     },
     "python-envs.defaultEnvManager": "ms-python.python:system",
     "python-envs.pythonProjects": []
