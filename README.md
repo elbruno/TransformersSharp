@@ -20,8 +20,9 @@ This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes)
 2. Clone this repository
 3. Run any of the console applications:
    ```bash
-   dotnet run --project DemoConsole/ConsoleApp3  # Text-to-image generation
-   dotnet run --project DemoConsole/ConsoleApp4  # Comprehensive testing
+   dotnet run --project DemoConsole/Demo03_text-to-image_Kandinsky  # Text-to-image with Kandinsky 2.2
+   dotnet run --project DemoConsole/Demo04_text-to-image_FLUX       # Text-to-image with FLUX.1-dev
+   dotnet run --project DemoConsole/ConsoleApp4                     # Comprehensive testing
    ```
 
 [Full Documentation](https://tonybaloney.github.io/TransformersSharp/)

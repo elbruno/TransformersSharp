@@ -6,30 +6,18 @@ The Text-to-Image pipeline in TransformersSharp enables you to generate high-qua
 
 TransformersSharp automatically detects and configures the appropriate pipeline for different model types:
 
-### Stable Diffusion v1.5 (Default)
-- **Model**: `stable-diffusion-v1-5/stable-diffusion-v1-5`
-- **Pipeline**: StableDiffusionPipeline
-- **Use Case**: General-purpose text-to-image generation with excellent balance of quality and speed
-- **Image Size**: 512x512 pixels (recommended)
-
-### Stable Diffusion v2.1
-- **Model**: `stabilityai/stable-diffusion-2-1`
-- **Pipeline**: StableDiffusionPipeline
-- **Use Case**: Improved image quality and better prompt adherence
-- **Image Size**: 768x768 pixels (recommended)
-
-### Kandinsky 2.2
+### Kandinsky 2.2 (Default)
 - **Model**: `kandinsky-community/kandinsky-2-2-decoder`
 - **Pipeline**: KandinskyV22Pipeline
-- **Use Case**: Artistic style generation with unique aesthetic
-- **Image Size**: 512x512 pixels
+- **Use Case**: Artistic style generation with unique aesthetic, now the default for balanced performance
+- **Image Size**: 512x512 pixels (recommended)
 
-### DeepFloyd IF
-- **Model**: `DeepFloyd/IF-I-M-v1.0`
-- **Pipeline**: IFPipeline
-- **Use Case**: High-resolution, photorealistic image generation
-- **Image Size**: 64x64 to 1024x1024 pixels
-- **Note**: Requires acceptance of license terms on HuggingFace
+### FLUX.1-dev
+- **Model**: `black-forest-labs/FLUX.1-dev`
+- **Pipeline**: FluxPipeline (with AutoPipeline fallback)
+- **Use Case**: State-of-the-art text-to-image generation with high quality and prompt adherence
+- **Image Size**: 1024x1024 pixels (recommended)
+- **Note**: Requires HuggingFace token acceptance and significant VRAM
 
 ## Architecture
 
@@ -49,7 +37,7 @@ This modular design ensures better maintainability and allows for independent op
 ```csharp
 using TransformersSharp.Pipelines;
 
-// Create pipeline with default model (Stable Diffusion v1.5)
+// Create pipeline with default model (Kandinsky 2.2)
 var pipeline = TextToImagePipeline.FromModel();
 
 // Generate image
@@ -68,7 +56,7 @@ using TransformersSharp.Models;
 
 // Create pipeline with specific model and device
 var pipeline = TextToImagePipeline.FromModel(
-    model: "stabilityai/stable-diffusion-2-1",
+    model: "black-forest-labs/FLUX.1-dev",
     device: "cuda",  // Use GPU if available
     silentDeviceFallback: true  // Silently fall back to CPU if CUDA unavailable
 );
@@ -76,10 +64,10 @@ var pipeline = TextToImagePipeline.FromModel(
 // Generate with custom parameters
 var result = pipeline.Generate(
     prompt: "A futuristic cityscape with flying cars",
-    numInferenceSteps: 50,      // Higher = better quality, slower
-    guidanceScale: 7.5f,        // Higher = more prompt adherence
-    height: 768,                // Image height
-    width: 768                  // Image width
+    numInferenceSteps: 20,          // FLUX uses fewer steps efficiently
+    guidanceScale: 3.5f,            // FLUX uses lower guidance scale
+    height: 1024,                   // FLUX's native resolution
+    width: 1024                     // FLUX's native resolution
 );
 
 Console.WriteLine($"Generated {result.Width}x{result.Height} image");
@@ -122,29 +110,19 @@ Console.WriteLine($"Used device: {result.DeviceType}");
 
 | Model | Best For | Speed | Quality | Memory |
 |-------|----------|-------|---------|---------|
-| Stable Diffusion v1.5 | General use, balanced performance | Fast | Good | Low |
-| Stable Diffusion v2.1 | High quality, detailed images | Medium | Excellent | Medium |
-| Kandinsky 2.2 | Artistic, stylized images | Medium | Good | Medium |
-| DeepFloyd IF | Photorealistic, high-res images | Slow | Excellent | High |
+| Kandinsky 2.2 | Artistic, stylized images (Default) | Medium | Good | Medium |
+| FLUX.1-dev | State-of-the-art, photorealistic images | Medium | Excellent | High |
 
 ### Model-Specific Examples
 
 ```csharp
-// Stable Diffusion v1.5 - Great for general use
-var sd15 = TextToImagePipeline.FromModel("stable-diffusion-v1-5/stable-diffusion-v1-5");
-var nature = sd15.Generate("A serene lake surrounded by pine trees");
-
-// Stable Diffusion v2.1 - Better quality and detail
-var sd21 = TextToImagePipeline.FromModel("stabilityai/stable-diffusion-2-1");
-var portrait = sd21.Generate("Portrait of a wise old wizard with a long beard", height: 768, width: 768);
-
-// Kandinsky 2.2 - Artistic style
+// Kandinsky 2.2 - Artistic style (Default)
 var kandinsky = TextToImagePipeline.FromModel("kandinsky-community/kandinsky-2-2-decoder");
 var art = kandinsky.Generate("An abstract painting of music in vibrant colors");
 
-// DeepFloyd IF - Photorealistic (requires HF token for some models)
-var deepfloyd = TextToImagePipeline.FromModel("DeepFloyd/IF-I-M-v1.0");
-var photo = deepfloyd.Generate("A photorealistic image of a cat wearing sunglasses");
+// FLUX.1-dev - State-of-the-art quality
+var flux = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
+var photo = flux.Generate("A photorealistic portrait of a wise old wizard", height: 1024, width: 1024);
 ```
 
 ## Performance Optimization
@@ -172,18 +150,18 @@ else
 var quick = pipeline.Generate(
     prompt: "A simple sketch of a house",
     numInferenceSteps: 10,      // Fewer steps = faster
-    guidanceScale: 5.0f,        // Lower guidance = faster
-    height: 256,                // Smaller size = faster
-    width: 256
+    guidanceScale: 3.0f,        // Lower guidance = faster (FLUX-optimized)
+    height: 512,                // Smaller size = faster
+    width: 512
 );
 
 // High quality generation (slower)
 var detailed = pipeline.Generate(
     prompt: "A highly detailed oil painting of a Victorian mansion",
-    numInferenceSteps: 100,     // More steps = better quality
-    guidanceScale: 12.0f,       // Higher guidance = more detailed
-    height: 768,                // Larger size = more detail
-    width: 768
+    numInferenceSteps: 30,      // More steps = better quality (FLUX-optimized)
+    guidanceScale: 4.0f,        // Higher guidance = more detailed (FLUX-optimized)
+    height: 1024,               // Larger size = more detail
+    width: 1024
 );
 ```
 
@@ -233,7 +211,7 @@ var result = pipeline.Generate(
 try
 {
     var pipeline = TextToImagePipeline.FromModel(
-        model: "stable-diffusion-v1-5/stable-diffusion-v1-5",
+        model: "kandinsky-community/kandinsky-2-2-decoder",
         device: "cuda",
         silentDeviceFallback: true
     );
