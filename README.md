@@ -21,9 +21,11 @@ This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes)
 3. Run any of the console applications:
    ```bash
    dotnet run --project DemoConsole/Demo03_text-to-image_Kandinsky  # Text-to-image with Kandinsky 2.2
-   dotnet run --project DemoConsole/Demo04_text-to-image_FLUX       # Text-to-image with FLUX.1-dev
+   dotnet run --project DemoConsole/Demo04_text-to-image_FLUX       # Text-to-image with FLUX.1-dev (requires HF token)
    dotnet run --project DemoConsole/ConsoleApp4                     # Comprehensive testing
    ```
+
+**Note:** FLUX.1-dev requires a HuggingFace token. Set the `HF_TOKEN` environment variable or see the [Text-to-Image documentation](docs/pipelines/text_to_image.md#huggingface-authentication) for details.
 
 [Full Documentation](https://tonybaloney.github.io/TransformersSharp/)
 
@@ -34,6 +36,7 @@ This project was created using [CSnakes](https://github.com/tonybaloney/CSnakes)
 - Utility classes to access pipelines like:
     - [Text Generation Pipeline (`TextGenerationPipeline`)](https://tonybaloney.github.io/TransformersSharp/docs/pipelines/text_generation)
     - [Text Classification Pipeline (`TextClassificationPipeline)](https://tonybaloney.github.io/TransformersSharp/docs/pipelines/text_classification)
+    - [Text-to-Image Pipeline (`TextToImagePipeline`)](https://tonybaloney.github.io/TransformersSharp/docs/pipelines/text_to_image) - Supports Kandinsky 2.2 and FLUX.1-dev
     - [Image Classification Pipeline(`ImageClassificationPipeline`)](https://tonybaloney.github.io/TransformersSharp/docs/pipelines/image_classification)
     - [Object Detection Pipeline (`ObjectDetectionPipeline`)](https://tonybaloney.github.io/TransformersSharp/docs/pipelines/object_detection)
     - [Automatic Speech Recognition (`AutomaticSpeechRecognitionPipeline`)](https://tonybaloney.github.io/TransformersSharp/docs/pipelines/auto_speech_recognition)

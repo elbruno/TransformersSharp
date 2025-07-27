@@ -17,7 +17,8 @@ TransformersSharp automatically detects and configures the appropriate pipeline 
 - **Pipeline**: FluxPipeline (with AutoPipeline fallback)
 - **Use Case**: State-of-the-art text-to-image generation with high quality and prompt adherence
 - **Image Size**: 1024x1024 pixels (recommended)
-- **Note**: Requires HuggingFace token acceptance and significant VRAM
+- **Note**: Requires HuggingFace token and model access approval
+- **Authentication**: Gated model requiring HuggingFace login
 
 ## Architecture
 
@@ -58,7 +59,8 @@ using TransformersSharp.Models;
 var pipeline = TextToImagePipeline.FromModel(
     model: "black-forest-labs/FLUX.1-dev",
     device: "cuda",  // Use GPU if available
-    silentDeviceFallback: true  // Silently fall back to CPU if CUDA unavailable
+    silentDeviceFallback: true,  // Silently fall back to CPU if CUDA unavailable
+    huggingFaceToken: "your_hf_token_here"  // Required for gated models
 );
 
 // Generate with custom parameters
@@ -71,6 +73,51 @@ var result = pipeline.Generate(
 );
 
 Console.WriteLine($"Generated {result.Width}x{result.Height} image");
+```
+
+### HuggingFace Authentication
+
+For gated models like FLUX.1-dev, you need to authenticate with HuggingFace:
+
+```csharp
+// Method 1: Pass token directly to pipeline
+var pipeline = TextToImagePipeline.FromModel(
+    model: "black-forest-labs/FLUX.1-dev",
+    huggingFaceToken: "your_hf_token_here"
+);
+
+// Method 2: Global authentication (applies to all subsequent operations)
+TransformerEnvironment.Login("your_hf_token_here");
+var pipeline = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
+
+// Method 3: Environment variable (recommended for security)
+// Set HF_TOKEN or HUGGINGFACE_TOKEN environment variable
+// The pipeline will automatically use it when provided
+```
+
+#### Getting a HuggingFace Token
+
+1. Visit [HuggingFace Token Settings](https://huggingface.co/settings/tokens)
+2. Create a new token with "Read" permissions
+3. Request access to gated models at their model pages (e.g., [FLUX.1-dev](https://huggingface.co/black-forest-labs/FLUX.1-dev))
+4. Wait for approval (usually automatic for FLUX.1-dev)
+
+#### Security Best Practices
+
+```csharp
+// Use environment variables instead of hardcoding tokens
+var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN");
+if (!string.IsNullOrEmpty(hfToken))
+{
+    var pipeline = TextToImagePipeline.FromModel(
+        "black-forest-labs/FLUX.1-dev", 
+        huggingFaceToken: hfToken
+    );
+}
+else
+{
+    Console.WriteLine("Please set HF_TOKEN environment variable");
+}
 ```
 
 ### Using ImageGenerator (Recommended)
@@ -120,8 +167,9 @@ Console.WriteLine($"Used device: {result.DeviceType}");
 var kandinsky = TextToImagePipeline.FromModel("kandinsky-community/kandinsky-2-2-decoder");
 var art = kandinsky.Generate("An abstract painting of music in vibrant colors");
 
-// FLUX.1-dev - State-of-the-art quality
-var flux = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev");
+// FLUX.1-dev - State-of-the-art quality (requires HuggingFace token)
+var hfToken = Environment.GetEnvironmentVariable("HF_TOKEN");
+var flux = TextToImagePipeline.FromModel("black-forest-labs/FLUX.1-dev", huggingFaceToken: hfToken);
 var photo = flux.Generate("A photorealistic portrait of a wise old wizard", height: 1024, width: 1024);
 ```
 
@@ -306,7 +354,15 @@ Console.WriteLine($"CUDA Available: {deviceInfo.CudaAvailable}");
    Models are downloaded to: %USERPROFILE%\.cache\huggingface\transformers
    ```
 
-4. **Slow Generation on CPU**
+4. **Authentication Issues (Gated Models)**
+   ```
+   Error: "Access to model X is restricted"
+   Solution: 
+   1. Get HuggingFace token from https://huggingface.co/settings/tokens
+   2. Request access to the specific model
+   3. Set HF_TOKEN environment variable or pass token to pipeline
+   ```
+5. **Slow Generation on CPU**
    ```
    This is normal. Consider:
    - Using smaller image sizes (256x256 instead of 512x512)
