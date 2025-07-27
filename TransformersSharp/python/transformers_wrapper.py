@@ -925,15 +925,8 @@ def invoke_text_to_image_pipeline(
     if not hasattr(image, 'save'):
         raise RuntimeError(f"Image generation failed: result is not a PIL Image, got {type(image)}")
 
-    # Print image properties for debugging
-    try:
-    # Debug print removed
-    except Exception as e:
-    # Debug print removed
-
     # Convert PIL Image to bytes
     return convert_image_to_bytes(image)
-
 
 # Note: _convert_image_to_bytes function has been moved to image_utils.py module
 # and is now imported as convert_image_to_bytes

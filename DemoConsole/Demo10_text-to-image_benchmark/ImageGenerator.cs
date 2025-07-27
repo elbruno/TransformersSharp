@@ -42,24 +42,7 @@ public class ImageGenerator : IDisposable
         _device = device;
         _settings = settings ?? new ImageGenerationSettings();
 
-        ValidateDeviceAndProvideGuidance();
         CreatePipeline();
-    }
-
-    /// <summary>
-    /// Validates device availability and provides user guidance.
-    /// </summary>
-    private void ValidateDeviceAndProvideGuidance()
-    {
-        if (_device.ToLower() == "cuda" && !TransformerEnvironment.IsCudaAvailable())
-        {
-            Console.WriteLine($"⚠️  CUDA requested but not available. Using CPU instead.");
-            Console.WriteLine("   To enable GPU acceleration, ensure you have:");
-            Console.WriteLine("   - Compatible NVIDIA GPU");
-            Console.WriteLine("   - NVIDIA drivers installed");
-            Console.WriteLine("   - CUDA-enabled PyTorch (run TransformerEnvironment.InstallCudaPyTorch())");
-            Console.WriteLine();
-        }
     }
 
     /// <summary>
@@ -71,23 +54,19 @@ public class ImageGenerator : IDisposable
 
         try
         {
-
             if (_device == "cuda")
             {
                 _pipeline = TextToImagePipeline.FromModel(
                             model: _model,
                             device: _device,
-                            torchDtype: TorchDtype.Float16,
-                            silentDeviceFallback: true);
+                            torchDtype: TorchDtype.Float16);
             }
             else
             {
                 _pipeline = TextToImagePipeline.FromModel(
                 model: _model,
-                device: _device,
-                silentDeviceFallback: true);
+                device: _device);
             }
-
         }
         catch (Exception ex) when (IsCompatibilityError(ex))
         {

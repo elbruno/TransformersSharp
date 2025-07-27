@@ -25,12 +25,8 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("=== TransformersSharp Text-to-Image Benchmark - 256x256 Generation ===\n");
             Console.WriteLine("Image size: 256x256 pixels (optimized for performance testing)\n");
 
-            if (!PerformDiagnosticCheck()) return;
-
-            var deviceInfo = PerformDeviceCapabilityCheck();
-
             PerformCpuTests();
-            PerformGpuTests(deviceInfo.cudaAvailable);
+            PerformGpuTests();
 
             DisplayPerformanceComparison();
             DisplaySystemInformation();
@@ -38,108 +34,6 @@ namespace Demo10_text_to_image_benchmark
             Console.WriteLine("=== Benchmark Complete ===");
         }
 
-        /// <summary>
-        /// Performs early diagnostic check for text-to-image compatibility.
-        /// </summary>
-        /// <returns>True if diagnostics pass, false if critical issues found</returns>
-        private static bool PerformDiagnosticCheck()
-        {
-            Console.WriteLine("=== Diagnostic Check ===");
-            try
-            {
-                var testModel = "kandinsky-community/kandinsky-2-2-decoder";
-                Console.WriteLine($"Testing text-to-image pipeline compatibility...");
-
-                using var testGenerator = new ImageGenerator(model: testModel, device: "cpu");
-                Console.WriteLine("✅ Text-to-image pipeline compatibility check passed");
-                return true;
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("package compatibility"))
-            {
-                Console.WriteLine("❌ Text-to-image pipeline compatibility check failed");
-                Console.WriteLine();
-                Console.WriteLine("🚨 CRITICAL ISSUE DETECTED:");
-                Console.WriteLine(ex.Message);
-                Console.WriteLine();
-                Console.WriteLine("Cannot proceed with image generation tests until this is resolved.");
-                Console.WriteLine("Please follow the solution steps above and restart the application.");
-                return false;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"⚠️  Text-to-image pipeline compatibility check failed: {ex.Message}");
-                Console.WriteLine("Proceeding with tests, but may encounter errors...");
-                return true;
-            }
-            finally
-            {
-                Console.WriteLine();
-            }
-        }
-
-        /// <summary>
-        /// Performs device capability check and provides user guidance.
-        /// </summary>
-        /// <returns>Device information including CUDA availability</returns>
-        private static (bool cudaAvailable, Dictionary<string, object> deviceInfo) PerformDeviceCapabilityCheck()
-        {
-            Console.WriteLine("=== Device Capability Check ===");
-            var deviceInfo = TransformerEnvironment.GetDeviceInfo();
-            bool cudaAvailable = TransformerEnvironment.IsCudaAvailable();
-
-            Console.WriteLine($"CUDA Available: {(cudaAvailable ? "✅ Yes" : "❌ No")}");
-
-            if (cudaAvailable)
-            {
-                DisplayCudaInformation(deviceInfo);
-            }
-            else
-            {
-                DisplayCudaGuidance();
-            }
-
-            Console.WriteLine();
-            return (cudaAvailable, deviceInfo);
-        }
-
-        /// <summary>
-        /// Displays CUDA device information when available.
-        /// </summary>
-        private static void DisplayCudaInformation(Dictionary<string, object> deviceInfo)
-        {
-            if (deviceInfo.ContainsKey("cuda_device_count"))
-            {
-                Console.WriteLine($"CUDA Devices: {deviceInfo["cuda_device_count"]}");
-            }
-            if (deviceInfo.ContainsKey("device_name"))
-            {
-                Console.WriteLine($"GPU: {deviceInfo["device_name"]}");
-            }
-        }
-
-        /// <summary>
-        /// Displays guidance for enabling CUDA acceleration.
-        /// </summary>
-        private static void DisplayCudaGuidance()
-        {
-            Console.WriteLine("GPU acceleration unavailable - using CPU only");
-            Console.WriteLine("To enable GPU acceleration:");
-            Console.WriteLine("  1. Ensure you have a compatible NVIDIA GPU");
-            Console.WriteLine("  2. Install NVIDIA drivers");
-            Console.WriteLine("  3. Installing CUDA PyTorch...");
-
-            try
-            {
-                TransformerEnvironment.InstallPyTorch();
-                Console.WriteLine("✅ CUDA PyTorch installation initiated");
-                Console.WriteLine("⚠️  Please restart the application after installation completes");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Failed to install CUDA PyTorch: {ex.Message}");
-                Console.WriteLine("   You may need to install manually - see installation instructions above");
-            }
-        }
 
         /// <summary>
         /// Performs CPU-based image generation tests.
@@ -161,23 +55,14 @@ namespace Demo10_text_to_image_benchmark
         /// <summary>
         /// Performs GPU-based image generation tests if CUDA is available.
         /// </summary>
-        private static void PerformGpuTests(bool cudaAvailable)
+        private static void PerformGpuTests()
         {
             Console.WriteLine("----------------------");
             Console.WriteLine("--- GPU (CUDA) Generation ---");
 
-            if (cudaAvailable)
+            foreach (var prompt in SamplePrompts)
             {
-                foreach (var prompt in SamplePrompts)
-                {
-                    RunImageGenerationTest(prompt, "cuda", GpuResults);
-                }
-            }
-            else
-            {
-                Console.WriteLine("⚠️  Skipping GPU tests - CUDA not available");
-                Console.WriteLine("   Run on a system with NVIDIA GPU and CUDA support for GPU acceleration");
-                Console.WriteLine();
+                RunImageGenerationTest(prompt, "cuda", GpuResults);
             }
         }
 
