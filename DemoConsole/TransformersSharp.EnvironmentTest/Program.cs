@@ -177,34 +177,36 @@ namespace TransformersSharp.EnvironmentTest
                     Console.WriteLine("CUDA not available - attempting automatic installation...");
                     Console.WriteLine("- Using CPU-only processing currently");
                     Console.WriteLine("- Attempting to install CUDA-enabled PyTorch");
-                    
+
                     // Attempt automatic CUDA installation
                     Console.WriteLine();
                     Console.WriteLine("🔧 Attempting automatic CUDA PyTorch installation...");
                     TestResults["cuda_installation_attempted"] = true;
-                    
+
                     try
                     {
                         bool installationResult = TransformerEnvironment.InstallPyTorch(executeAutomatically: true);
-                        
+
                         if (installationResult)
                         {
                             Console.WriteLine("✅ CUDA installation process completed successfully");
                             TestResults["cuda_installation_success"] = true;
-                            
-                            // Re-check CUDA availability after installation
+
+                            // Re-initialize the environment to reload Python and packages
                             Console.WriteLine();
+                            Console.WriteLine("� Reloading TransformerEnvironment to refresh CUDA state...");
+                            TransformerEnvironment.Dispose();
+                            System.Threading.Thread.Sleep(2000);
+
+                            // Re-check CUDA availability after installation
                             Console.WriteLine("🔍 Re-checking CUDA availability after installation...");
-                            
-                            // Small delay to ensure installation effects are visible
                             System.Threading.Thread.Sleep(3000);
-                            
                             bool finalCudaAvailable = TransformerEnvironment.IsCudaAvailable();
                             Console.WriteLine($"CUDA Available After Installation: {(finalCudaAvailable ? "✅ Yes" : "❌ No")}");
-                            
+
                             TestResults["cuda_available"] = finalCudaAvailable;
                             TestResults["cuda_installation_improved_availability"] = finalCudaAvailable && !initialCudaAvailable;
-                            
+
                             if (finalCudaAvailable && !initialCudaAvailable)
                             {
                                 Console.WriteLine("🎉 Success! CUDA installation enabled GPU acceleration!");

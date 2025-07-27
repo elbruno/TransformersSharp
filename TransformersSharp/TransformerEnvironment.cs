@@ -161,14 +161,33 @@ namespace TransformersSharp
             return @"
 import subprocess
 import sys
+import os
 
 def main():
+    # Activate venv if not already active (for safety, but usually not needed in Python script)
+    venv_path = os.environ.get('LOCALAPPDATA', '') + r'\\TransformersSharp\\venv'
+    activate_script = os.path.join(venv_path, 'Scripts', 'activate_this.py')
+    if os.path.exists(activate_script):
+        with open(activate_script) as f:
+            exec(f.read(), {'__file__': activate_script})
+
+    # Uninstall any existing torch packages
+    subprocess.call([sys.executable, '-m', 'pip', 'uninstall', 'torch', 'torchvision', 'torchaudio', '-y'])
+
+    # Install CUDA-enabled torch, torchvision, torchaudio
     subprocess.check_call([
         sys.executable, '-m', 'pip', 'install',
         'torch', 'torchvision', 'torchaudio',
         '--index-url', 'https://download.pytorch.org/whl/cu121'
     ])
     print('PyTorch (CUDA) installed successfully.')
+
+    # Verify installation
+    import torch
+    print('torch:', torch.__version__)
+    print('cuda available:', torch.cuda.is_available())
+    print('cuda version:', torch.version.cuda)
+    print('GPU:', torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No GPU')
 
 if __name__ == '__main__':
     main()
