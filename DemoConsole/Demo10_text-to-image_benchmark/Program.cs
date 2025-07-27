@@ -41,7 +41,7 @@ namespace Demo10_text_to_image_benchmark
             PerformGpuTests();
 
             DisplayPerformanceComparison();
-            DisplaySystemInformation();
+            DisplayTestExecutionSummary();
 
             Console.WriteLine("=== Benchmark Complete ===");
         }
@@ -57,10 +57,7 @@ namespace Demo10_text_to_image_benchmark
 
             foreach (var prompt in SamplePrompts)
             {
-                if (RunImageGenerationTest(prompt, "cpu", CpuResults))
-                {
-                    break; // Exit on critical error
-                }
+                RunImageGenerationTest(prompt, "cpu", CpuResults);                
             }
             Console.WriteLine("----------------------");
         }
@@ -115,7 +112,6 @@ namespace Demo10_text_to_image_benchmark
         /// </summary>
         private static void DisplayPerformanceComparison()
         {
-            Console.WriteLine("----------------------");
             Console.WriteLine("==============================");
             Console.WriteLine("=== Performance Comparison ===");
 
@@ -210,69 +206,11 @@ namespace Demo10_text_to_image_benchmark
         }
 
         /// <summary>
-        /// Displays comprehensive system information.
-        /// </summary>
-        private static void DisplaySystemInformation()
-        {
-            Console.WriteLine("==============================");
-            Console.WriteLine("=== Test Complete ===");
-            Console.WriteLine();
-            Console.WriteLine("=== System Information ===");
-
-            try
-            {
-                var systemInfo = TransformerEnvironment.GetDetailedSystemInfo();
-                DisplaySystemDetails(systemInfo);
-                DisplayTestExecutionSummary();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ Could not retrieve detailed system information: {ex.Message}");
-            }
-
-            Console.WriteLine("==============================");
-        }
-
-        /// <summary>
-        /// Displays detailed system information sections.
-        /// </summary>
-        private static void DisplaySystemDetails(Dictionary<string, object> systemInfo)
-        {
-            if (systemInfo.ContainsKey("system") && systemInfo["system"] is Dictionary<string, object> sysInfo)
-            {
-                Console.WriteLine("--- System Information ---");
-                if (sysInfo.ContainsKey("platform")) Console.WriteLine($"Platform: {sysInfo["platform"]}");
-                if (sysInfo.ContainsKey("architecture")) Console.WriteLine($"Architecture: {sysInfo["architecture"]}");
-                if (sysInfo.ContainsKey("processor_count")) Console.WriteLine($"Processor Count: {sysInfo["processor_count"]}");
-                if (sysInfo.ContainsKey("dotnet_version")) Console.WriteLine($".NET Version: {sysInfo["dotnet_version"]}");
-                Console.WriteLine();
-            }
-
-            if (systemInfo.ContainsKey("cuda") && systemInfo["cuda"] is Dictionary<string, object> cudaInfo)
-            {
-                Console.WriteLine("--- CUDA Information ---");
-                if (cudaInfo.ContainsKey("available"))
-                {
-                    bool available = Convert.ToBoolean(cudaInfo["available"]);
-                    Console.WriteLine($"CUDA Available: {(available ? "✅ Yes" : "❌ No")}");
-                }
-                if (cudaInfo.ContainsKey("description")) Console.WriteLine($"Status: {cudaInfo["description"]}");
-                Console.WriteLine();
-            }
-
-            if (systemInfo.ContainsKey("memory") && systemInfo["memory"] is Dictionary<string, object> memInfo)
-            {
-                Console.WriteLine("--- Memory Information ---");
-                if (memInfo.ContainsKey("working_set_mb")) Console.WriteLine($"Working Set: {memInfo["working_set_mb"]} MB");
-                Console.WriteLine();
-            }
-        }
-
-        /// <summary>
         /// Displays test execution summary with performance metrics.
         /// </summary>
         private static void DisplayTestExecutionSummary()
         {
+            Console.WriteLine("==============================");
             Console.WriteLine("--- Test Execution Summary ---");
             Console.WriteLine($"CPU Tests Completed: {CpuResults.Count}/{SamplePrompts.Length}");
             Console.WriteLine($"GPU Tests Completed: {GpuResults.Count}/{SamplePrompts.Length}");
@@ -295,6 +233,7 @@ namespace Demo10_text_to_image_benchmark
                     Console.WriteLine($"GPU Speedup Factor: {speedup:F2}x");
                 }
             }
+            Console.WriteLine("==============================");
         }
     }
 }
