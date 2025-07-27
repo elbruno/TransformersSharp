@@ -58,31 +58,7 @@ else
     exit 1
 fi
 
-# Ask if user wants to recreate the environment
 echo ""
-read -p "Would you like to create a new clean virtual environment? (Y/n): " recreate
-if [[ ! "$recreate" =~ ^[Nn]$ ]]; then
-    echo "Creating new virtual environment..."
-    
-    # Create directory if it doesn't exist
-    mkdir -p "$(dirname "$VENV_PATH")"
-    
-    if python3 -m venv "$VENV_PATH"; then
-        echo "✅ New virtual environment created successfully."
-        
-        # Activate and upgrade pip
-        echo "Activating new environment and upgrading pip..."
-        source "$VENV_PATH/bin/activate"
-        python -m pip install --upgrade pip
-        echo "✅ Virtual environment ready for use."
-        echo ""
-        echo "You can now run your TransformersSharp application to install dependencies."
-    else
-        echo "❌ Failed to create virtual environment."
-    fi
-else
-    echo "✅ Cleanup complete. Virtual environment removed."
-fi
-
+echo "✅ Cleanup complete. Virtual environment removed."
 echo ""
 echo "=== Cleanup Complete ==="

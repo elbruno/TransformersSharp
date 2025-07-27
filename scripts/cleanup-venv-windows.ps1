@@ -4,6 +4,13 @@
 Write-Host "=== TransformersSharp Virtual Environment Cleanup ===" -ForegroundColor Green
 Write-Host ""
 
+
+# Check for -y parameter (must be done before any prompts)
+$autoYes = $false
+if ($args.Count -gt 0 -and $args[0] -eq '-y') {
+    $autoYes = $true
+}
+
 # Get the virtual environment path
 $venvPath = $env:TRANSFORMERS_SHARP_VENV_PATH
 if (-not $venvPath) {
@@ -25,17 +32,6 @@ Write-Host ""
 Write-Host "⚠️  This will permanently delete the virtual environment and all installed packages." -ForegroundColor Yellow
 Write-Host "Virtual environment location: $venvPath" -ForegroundColor Cyan
 Write-Host ""
-
-$confirmation = Read-Host "Are you sure you want to continue? (y/N)"
-if ($confirmation -ne "y" -and $confirmation -ne "Y") {
-    Write-Host "Operation cancelled." -ForegroundColor Yellow
-    exit 0
-}
-# Check for -y parameter
-$autoYes = $false
-if ($args.Count -gt 0 -and $args[0] -eq '-y') {
-    $autoYes = $true
-}
 
 if (-not $autoYes) {
     $confirmation = Read-Host "Are you sure you want to continue? (y/N)"
@@ -74,41 +70,8 @@ catch {
     exit 1
 }
 
-# Ask if user wants to recreate the environment
-Write-Host ""
-$recreate = Read-Host "Would you like to create a new clean virtual environment? (Y/n)"
-if ($recreate -ne "n" -and $recreate -ne "N") {
-    Write-Host "Creating new virtual environment..." -ForegroundColor Yellow
-    
-    try {
-        # Create new virtual environment
-        python -m venv $venvPath
-        
-        if (Test-Path $venvPath) {
-            Write-Host "✅ New virtual environment created successfully." -ForegroundColor Green
-            
-            # Activate and upgrade pip
-            $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
-            if (Test-Path $activateScript) {
-                Write-Host "Activating new environment and upgrading pip..." -ForegroundColor Yellow
-                & $activateScript
-                python -m pip install --upgrade pip
-                Write-Host "✅ Virtual environment ready for use." -ForegroundColor Green
-                Write-Host ""
-                Write-Host "You can now run your TransformersSharp application to install dependencies." -ForegroundColor Cyan
-            }
-        }
-        else {
-            Write-Host "❌ Failed to create virtual environment." -ForegroundColor Red
-        }
-    }
-    catch {
-        Write-Host "❌ Failed to create virtual environment: $($_.Exception.Message)" -ForegroundColor Red
-    }
-}
-else {
-    Write-Host "✅ Cleanup complete. Virtual environment removed." -ForegroundColor Green
-}
 
+Write-Host ""
+Write-Host "✅ Cleanup complete. Virtual environment removed." -ForegroundColor Green
 Write-Host ""
 Write-Host "=== Cleanup Complete ===" -ForegroundColor Green
