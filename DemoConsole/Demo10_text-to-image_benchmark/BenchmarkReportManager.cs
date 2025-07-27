@@ -29,6 +29,70 @@ public static class BenchmarkReportManager
         return new ExportResultPaths { CsvPath = csvPath, MarkdownPath = mdPath, HtmlPath = htmlPath };
     }
 
+    private static string GetCpuInfo()
+    {
+        try
+        {
+            string cpu = "unknown";
+#if WINDOWS
+            using (var searcher = new System.Management.ManagementObjectSearcher("select Name from Win32_Processor"))
+            {
+                foreach (var item in searcher.Get())
+                {
+                    cpu = item["Name"]?.ToString() ?? "unknown";
+                    break;
+                }
+            }
+#else
+            cpu = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString();
+#endif
+            return cpu;
+        }
+        catch { return "unknown"; }
+    }
+
+    private static string GetGpuInfo()
+    {
+        try
+        {
+            string gpu = "unknown";
+#if WINDOWS
+            using (var searcher = new System.Management.ManagementObjectSearcher("select Name from Win32_VideoController"))
+            {
+                foreach (var item in searcher.Get())
+                {
+                    gpu = item["Name"]?.ToString() ?? "unknown";
+                    break;
+                }
+            }
+#endif
+            return gpu;
+        }
+        catch { return "unknown"; }
+    }
+
+    private static string GetRamInfo()
+    {
+        try
+        {
+#if WINDOWS
+            using (var searcher = new System.Management.ManagementObjectSearcher("SELECT Capacity FROM Win32_PhysicalMemory"))
+            {
+                long total = 0;
+                foreach (var item in searcher.Get())
+                {
+                    if (item["Capacity"] != null)
+                        total += Convert.ToInt64(item["Capacity"]);
+                }
+                return $"{(total / (1024 * 1024 * 1024.0)):F1} GB";
+            }
+#else
+            return "unknown";
+#endif
+        }
+        catch { return "unknown"; }
+    }
+
     public static void ExportToConsole(IEnumerable<ImageGenerationResult> cpuResults, string[] prompts, IEnumerable<ImageGenerationResult> gpuResults, DateTime timestamp)
     {
         Console.WriteLine("# TransformersSharp Benchmark Report");
@@ -39,7 +103,10 @@ public static class BenchmarkReportManager
         Console.WriteLine($"- Image Size: {ProgramImageSize()}x{ProgramImageSize()} px");
         Console.WriteLine($"- Sample Count: {prompts.Length}");
         Console.WriteLine($"- .NET Version: {System.Environment.Version}");
-        Console.WriteLine($"- OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}\n");
+        Console.WriteLine($"- OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
+        Console.WriteLine($"- CPU: {GetCpuInfo()}");
+        Console.WriteLine($"- GPU: {GetGpuInfo()}");
+        Console.WriteLine($"- RAM: {GetRamInfo()}\n");
         // Summary
         Console.WriteLine("## Summary");
         double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
@@ -109,7 +176,10 @@ public static class BenchmarkReportManager
         sb.AppendLine($"<li>Image Size: {ProgramImageSize()}x{ProgramImageSize()} px</li>");
         sb.AppendLine($"<li>Sample Count: {prompts.Length}</li>");
         sb.AppendLine($"<li>.NET Version: {System.Environment.Version}</li>");
-        sb.AppendLine($"<li>OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}</li>");
+        sb.AppendLine($"<li>OS: {System.Net.WebUtility.HtmlEncode(System.Runtime.InteropServices.RuntimeInformation.OSDescription)}</li>");
+        sb.AppendLine($"<li>CPU: {System.Net.WebUtility.HtmlEncode(GetCpuInfo())}</li>");
+        sb.AppendLine($"<li>GPU: {System.Net.WebUtility.HtmlEncode(GetGpuInfo())}</li>");
+        sb.AppendLine($"<li>RAM: {System.Net.WebUtility.HtmlEncode(GetRamInfo())}</li>");
         sb.AppendLine("</ul>");
         // Summary
         sb.AppendLine("<h2>Summary</h2><ul>");
@@ -202,7 +272,7 @@ public static class BenchmarkReportManager
         sb.AppendLine($"# TransformersSharp Benchmark Report");
         sb.AppendLine($"_Generated: {timestamp:yyyy-MM-dd HH:mm:ss}_\n");
         // Configuration
-        sb.AppendLine($"## Configuration\n- Model: {ProgramModelName()}\n- Image Size: {ProgramImageSize()}x{ProgramImageSize()} px\n- Sample Count: {prompts.Length}\n- .NET Version: {System.Environment.Version}\n- OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}\n");
+        sb.AppendLine($"## Configuration\n- Model: {ProgramModelName()}\n- Image Size: {ProgramImageSize()}x{ProgramImageSize()} px\n- Sample Count: {prompts.Length}\n- .NET Version: {System.Environment.Version}\n- OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}\n- CPU: {GetCpuInfo()}\n- GPU: {GetGpuInfo()}\n- RAM: {GetRamInfo()}\n");
         // Summary
         sb.AppendLine("## Summary");
         double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
