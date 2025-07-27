@@ -9,7 +9,7 @@ public class ExportResultPaths
     public string? MarkdownPath { get; set; }
     public string? HtmlPath { get; set; }
 }
-public static class ExportManager
+public static class BenchmarkReportManager
 {
     public static ExportResultPaths ExportAll(List<ImageGenerationResult> allResults, string[] samplePrompts, List<ImageGenerationResult> cpuResults, List<ImageGenerationResult> gpuResults)
     {

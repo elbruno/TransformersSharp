@@ -31,7 +31,7 @@ internal class Program
         MockDataGenerator.GenerateMockGpuResults(GpuResults, SamplePrompts!);
 
         var allResults = CpuResults.Concat(GpuResults).ToList();
-        var exportPaths = ExportManager.ExportAll(allResults, SamplePrompts!, CpuResults, GpuResults);
+        var exportPaths = BenchmarkReportManager.ExportAll(allResults, SamplePrompts!, CpuResults, GpuResults);
         if (!string.IsNullOrEmpty(exportPaths.CsvPath))
             Console.WriteLine($"CSV results saved to: {exportPaths.CsvPath}");
         if (!string.IsNullOrEmpty(exportPaths.MarkdownPath))
@@ -39,7 +39,7 @@ internal class Program
         if (!string.IsNullOrEmpty(exportPaths.HtmlPath))
             Console.WriteLine($"HTML report saved to: {exportPaths.HtmlPath}");
 
-        // All reporting is now handled by ExportManager
+        // All reporting is now handled by BenchmarkReportManager
 
         Console.WriteLine("=== Benchmark Complete ===");
     }
