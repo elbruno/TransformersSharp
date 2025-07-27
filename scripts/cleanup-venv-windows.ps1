@@ -31,6 +31,22 @@ if ($confirmation -ne "y" -and $confirmation -ne "Y") {
     Write-Host "Operation cancelled." -ForegroundColor Yellow
     exit 0
 }
+# Check for -y parameter
+$autoYes = $false
+if ($args.Count -gt 0 -and $args[0] -eq '-y') {
+    $autoYes = $true
+}
+
+if (-not $autoYes) {
+    $confirmation = Read-Host "Are you sure you want to continue? (y/N)"
+    if ($confirmation -ne "y" -and $confirmation -ne "Y") {
+        Write-Host "Operation cancelled." -ForegroundColor Yellow
+        exit 0
+    }
+}
+else {
+    Write-Host "Auto-confirmation enabled (-y parameter detected). Proceeding with deletion..." -ForegroundColor Yellow
+}
 
 # Attempt to deactivate any active environment
 try {

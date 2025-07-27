@@ -17,16 +17,26 @@ if [ ! -d "$VENV_PATH" ]; then
     exit 0
 fi
 
+# Check for -y parameter
+AUTO_YES=0
+if [ "$1" = "-y" ]; then
+    AUTO_YES=1
+fi
+
 # Confirm deletion
 echo ""
 echo "⚠️  This will permanently delete the virtual environment and all installed packages."
 echo "Virtual environment location: $VENV_PATH"
 echo ""
 
-read -p "Are you sure you want to continue? (y/N): " confirmation
-if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
-    echo "Operation cancelled."
-    exit 0
+if [ $AUTO_YES -eq 0 ]; then
+    read -p "Are you sure you want to continue? (y/N): " confirmation
+    if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
+        echo "Operation cancelled."
+        exit 0
+    fi
+else
+    echo "Auto-confirmation enabled (-y parameter detected). Proceeding with deletion..."
 fi
 
 # Deactivate any active environment
