@@ -29,30 +29,19 @@ namespace Demo10_text_to_image_benchmark
             SamplePrompts = [.. SamplePrompts.Where(p => !string.IsNullOrWhiteSpace(p) && !p.StartsWith("#"))];
             SamplePrompts = [.. SamplePrompts.OrderBy(x => random.Next()).Take(sampleCount)];
 
-            PerformCpuTests();
-            PerformGpuTests();
+            //PerformCpuTests();
+            //PerformGpuTests();
 
-            // Get default output folder from ImageGenerator settings
-            string outputFolder = GetDefaultOutputFolder();
-            var firstResult = CpuResults.FirstOrDefault() ?? GpuResults.FirstOrDefault();
+            // Use mock data for export testing
+            MockDataGenerator.GenerateMockCpuResults(CpuResults, SamplePrompts!);
+            MockDataGenerator.GenerateMockGpuResults(GpuResults, SamplePrompts!);
 
-            if (firstResult != null && !string.IsNullOrEmpty(firstResult.FileFullPath))
-            {
-                var folder = Path.GetDirectoryName(firstResult.FileFullPath);
-                if (!string.IsNullOrEmpty(folder))
-                    outputFolder = folder;
-            }
-
-            // Use a single timestamp for both files
-            DateTime exportTimestamp = DateTime.Now;
             var allResults = CpuResults.Concat(GpuResults).ToList();
-            var csvPath = ExportManager.ExportToCsv(allResults, outputFolder, exportTimestamp);
-            var mdPath = ExportManager.ExportToMarkdown(CpuResults, GpuResults, SamplePrompts, outputFolder, exportTimestamp);
-
-            if (!string.IsNullOrEmpty(csvPath))
-                Console.WriteLine($"CSV results saved to: {csvPath}");
-            if (!string.IsNullOrEmpty(mdPath))
-                Console.WriteLine($"Markdown report saved to: {mdPath}");
+            var exportPaths = ExportManager.ExportAll(allResults, SamplePrompts!, CpuResults, GpuResults);
+            if (!string.IsNullOrEmpty(exportPaths.CsvPath))
+                Console.WriteLine($"CSV results saved to: {exportPaths.CsvPath}");
+            if (!string.IsNullOrEmpty(exportPaths.MarkdownPath))
+                Console.WriteLine($"Markdown report saved to: {exportPaths.MarkdownPath}");
 
             DisplayPerformanceComparison();
             DisplayTestExecutionSummary();

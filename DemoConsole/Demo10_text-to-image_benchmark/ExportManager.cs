@@ -7,8 +7,42 @@ using System.Text;
 
 namespace Demo10_text_to_image_benchmark
 {
+    public class ExportResultPaths
+    {
+        public string? CsvPath { get; set; }
+        public string? MarkdownPath { get; set; }
+    }
+
     public static class ExportManager
     {
+        /// <summary>
+        /// Exports results to CSV and Markdown, determines output folder, and returns file paths.
+        /// </summary>
+        public static ExportResultPaths ExportAll(List<ImageGenerationResult> allResults, string[] samplePrompts, List<ImageGenerationResult> cpuResults, List<ImageGenerationResult> gpuResults)
+        {
+            // Get default output folder from ImageGenerator settings
+            string outputFolder = GetDefaultOutputFolder();
+            var firstResult = allResults.FirstOrDefault();
+            if (firstResult != null && !string.IsNullOrEmpty(firstResult.FileFullPath))
+            {
+                var folder = Path.GetDirectoryName(firstResult.FileFullPath);
+                if (!string.IsNullOrEmpty(folder))
+                    outputFolder = folder;
+            }
+
+            // Use a single timestamp for both files
+            DateTime exportTimestamp = DateTime.Now;
+            var csvPath = ExportToCsv(allResults, outputFolder, exportTimestamp);
+            var mdPath = ExportToMarkdown(cpuResults, samplePrompts, gpuResults, outputFolder, exportTimestamp);
+
+            return new ExportResultPaths { CsvPath = csvPath, MarkdownPath = mdPath };
+        }
+
+        private static string GetDefaultOutputFolder()
+        {
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TransformersSharpImages");
+        }
+
         /// <summary>
         /// Exports the image generation results to a CSV file in the images folder.
         /// </summary>
@@ -19,6 +53,9 @@ namespace Demo10_text_to_image_benchmark
 
             string fileName = $"TransformersSharp_Benchmark_{timestamp:yyyyMMdd_HHmmss}.csv";
             string csvPath = Path.Combine(outputFolder, fileName);
+
+            // Ensure output directory exists
+            Directory.CreateDirectory(outputFolder);
 
             using (var writer = new StreamWriter(csvPath, false, Encoding.UTF8))
             {
@@ -38,10 +75,12 @@ namespace Demo10_text_to_image_benchmark
         /// <summary>
         /// Generates a markdown report summarizing the benchmark results.
         /// </summary>
-        public static string ExportToMarkdown(IEnumerable<ImageGenerationResult> cpuResults, IEnumerable<ImageGenerationResult> gpuResults, string[] prompts, string outputFolder, DateTime timestamp)
+        public static string ExportToMarkdown(IEnumerable<ImageGenerationResult> cpuResults, string[] prompts, IEnumerable<ImageGenerationResult> gpuResults, string outputFolder, DateTime timestamp)
         {
             string fileName = $"TransformersSharp_Benchmark_{timestamp:yyyyMMdd_HHmmss}.md";
             string mdPath = Path.Combine(outputFolder, fileName);
+            // Ensure output directory exists
+            Directory.CreateDirectory(outputFolder);
             var sb = new StringBuilder();
             sb.AppendLine($"# TransformersSharp Benchmark Report");
             sb.AppendLine($"_Generated: {timestamp:yyyy-MM-dd HH:mm:ss}_\n");
