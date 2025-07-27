@@ -25,7 +25,69 @@ public static class ExportManager
         var csvPath = ExportToCsv(allResults, outputFolder, exportTimestamp);
         var mdPath = ExportToMarkdown(cpuResults, samplePrompts, gpuResults, outputFolder, exportTimestamp);
         var htmlPath = ExportToHtml(cpuResults, samplePrompts, gpuResults, outputFolder, exportTimestamp);
+        ExportToConsole(cpuResults, samplePrompts, gpuResults, exportTimestamp);
         return new ExportResultPaths { CsvPath = csvPath, MarkdownPath = mdPath, HtmlPath = htmlPath };
+    }
+
+    public static void ExportToConsole(IEnumerable<ImageGenerationResult> cpuResults, string[] prompts, IEnumerable<ImageGenerationResult> gpuResults, DateTime timestamp)
+    {
+        Console.WriteLine("# TransformersSharp Benchmark Report");
+        Console.WriteLine($"Generated: {timestamp:yyyy-MM-dd HH:mm:ss}\n");
+        // Configuration
+        Console.WriteLine("## Configuration");
+        Console.WriteLine($"- Model: {ProgramModelName()}");
+        Console.WriteLine($"- Image Size: {ProgramImageSize()}x{ProgramImageSize()} px");
+        Console.WriteLine($"- Sample Count: {prompts.Length}");
+        Console.WriteLine($"- .NET Version: {System.Environment.Version}");
+        Console.WriteLine($"- OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}\n");
+        // Summary
+        Console.WriteLine("## Summary");
+        double cpuTotal = cpuResults.Sum(r => r.TimeTakenSeconds);
+        double gpuTotal = gpuResults.Sum(r => r.TimeTakenSeconds);
+        Console.WriteLine($"- Total CPU Time: {cpuTotal:F2} seconds");
+        Console.WriteLine($"- Total GPU Time: {(gpuResults.Any() ? gpuTotal.ToString("F2") : "N/A")} seconds");
+        if (cpuResults.Any() && gpuResults.Any())
+        {
+            double diff = cpuTotal - gpuTotal;
+            string winner = diff > 0 ? "GPU" : "CPU";
+            Console.WriteLine($"- {winner} was faster by {Math.Abs(diff):F2} seconds");
+            double percent = (Math.Abs(diff) / Math.Max(cpuTotal, gpuTotal)) * 100;
+            Console.WriteLine($"- Performance Improvement: {percent:F1}%");
+        }
+        Console.WriteLine();
+        // Aggregate Statistics
+        Console.WriteLine("## Aggregate Statistics");
+        Console.WriteLine($"- CPU Min: {cpuResults.Min(r => r.TimeTakenSeconds):F2} s, Max: {cpuResults.Max(r => r.TimeTakenSeconds):F2} s, Avg: {cpuResults.Average(r => r.TimeTakenSeconds):F2} s");
+        Console.WriteLine($"- GPU Min: {(gpuResults.Any() ? gpuResults.Min(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Max: {(gpuResults.Any() ? gpuResults.Max(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s, Avg: {(gpuResults.Any() ? gpuResults.Average(r => r.TimeTakenSeconds).ToString("F2") : "N/A")} s\n");
+        // Test Prompts
+        Console.WriteLine("## Test Prompts");
+        for (int i = 0; i < prompts.Length; i++)
+            Console.WriteLine($"{i + 1}. {prompts[i]}");
+        Console.WriteLine();
+        // Results Table
+        Console.WriteLine("## Results Table");
+        Console.WriteLine("| Prompt | Device | Time (s) | Speedup | Status | File |");
+        Console.WriteLine("|--------|--------|----------|---------|--------|------|");
+        for (int i = 0; i < prompts.Length; i++)
+        {
+            var cpu = cpuResults.ElementAtOrDefault(i);
+            var gpu = gpuResults.ElementAtOrDefault(i);
+            if (cpu != null)
+            {
+                string speedup = (gpu != null && gpu.TimeTakenSeconds > 0) ? (cpu.TimeTakenSeconds / gpu.TimeTakenSeconds).ToString("F2") : "-";
+                string status = !string.IsNullOrEmpty(cpu.FileFullPath) ? "Success" : "Fail";
+                string fileLink = !string.IsNullOrEmpty(cpu.FileFullPath) ? cpu.FileName : "";
+                Console.WriteLine($"| {prompts[i]} | CPU | {cpu.TimeTakenSeconds:F2} | {speedup} | {status} | {fileLink} |");
+            }
+            if (gpu != null)
+            {
+                string speedup = (cpu != null && gpu.TimeTakenSeconds > 0) ? (cpu.TimeTakenSeconds / gpu.TimeTakenSeconds).ToString("F2") : "-";
+                string status = !string.IsNullOrEmpty(gpu.FileFullPath) ? "Success" : "Fail";
+                string fileLink = !string.IsNullOrEmpty(gpu.FileFullPath) ? gpu.FileName : "";
+                Console.WriteLine($"| {prompts[i]} | GPU | {gpu.TimeTakenSeconds:F2} | {speedup} | {status} | {fileLink} |");
+            }
+        }
+        Console.WriteLine();
     }
 
     public static string ExportToHtml(IEnumerable<ImageGenerationResult> cpuResults, string[] prompts, IEnumerable<ImageGenerationResult> gpuResults, string outputFolder, DateTime timestamp)

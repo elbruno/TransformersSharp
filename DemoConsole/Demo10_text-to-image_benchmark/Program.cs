@@ -15,7 +15,6 @@ internal class Program
     static void Main(string[] args)
     {
         Console.WriteLine($"=== TransformersSharp Text-to-Image Benchmark - {ImageSize}x{ImageSize} Generation ===\n");
-        Console.WriteLine($"Image size: {ImageSize}x{ImageSize} pixels (optimized for performance testing)\n");
         Console.WriteLine("=== Benchmark Start ===");
 
         var random = new Random();
@@ -40,8 +39,7 @@ internal class Program
         if (!string.IsNullOrEmpty(exportPaths.HtmlPath))
             Console.WriteLine($"HTML report saved to: {exportPaths.HtmlPath}");
 
-        DisplayPerformanceComparison();
-        DisplayTestExecutionSummary();
+        // All reporting is now handled by ExportManager
 
         Console.WriteLine("=== Benchmark Complete ===");
     }
@@ -114,135 +112,4 @@ internal class Program
         return false; // Continue testing
     }
 
-    /// <summary>
-    /// Displays comprehensive performance comparison results.
-    /// </summary>
-    private static void DisplayPerformanceComparison()
-    {
-        Console.WriteLine("==============================");
-        Console.WriteLine("=== Performance Comparison ===");
-        Console.WriteLine($"Image size: {ImageSize}x{ImageSize} pixels");
-        Console.WriteLine();
-
-
-        if (GpuResults.Count > 0)
-        {
-            DisplayDetailedComparison();
-        }
-        else
-        {
-            DisplayCpuOnlyResults();
-        }
-
-        DisplayTotalRuntimeComparison();
-    }
-
-    /// <summary>
-    /// Displays detailed CPU vs GPU comparison.
-    /// </summary>
-    private static void DisplayDetailedComparison()
-    {
-        for (int i = 0; i < SamplePrompts!.Length; i++)
-        {
-            var cpuTime = CpuResults.Count > i ? CpuResults[i].TimeTakenSeconds : double.NaN;
-            var gpuTime = GpuResults.Count > i ? GpuResults[i].TimeTakenSeconds : double.NaN;
-
-            Console.WriteLine($"Prompt {i + 1}: {SamplePrompts[i]}");
-            Console.WriteLine($"  CPU: {cpuTime:F2} seconds");
-            Console.WriteLine($"  GPU: {gpuTime:F2} seconds");
-
-            if (!double.IsNaN(cpuTime) && !double.IsNaN(gpuTime))
-            {
-                var diff = cpuTime - gpuTime;
-                var faster = diff > 0 ? "GPU" : "CPU";
-                Console.WriteLine($"  {faster} was faster by {Math.Abs(diff):F2} seconds\n");
-            }
-            else
-            {
-                Console.WriteLine("  (One or both tests failed)\n");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Displays CPU-only results when GPU tests were skipped.
-    /// </summary>
-    private static void DisplayCpuOnlyResults()
-    {
-        Console.WriteLine("GPU tests were skipped - no performance comparison available");
-        Console.WriteLine($"CPU completed {CpuResults.Count} out of {SamplePrompts!.Length} tests");
-    }
-
-    /// <summary>
-    /// Displays total runtime comparison.
-    /// </summary>
-    private static void DisplayTotalRuntimeComparison()
-    {
-        var totalCpuTime = CpuResults.Sum(r => r.TimeTakenSeconds);
-        var totalGpuTime = GpuResults.Sum(r => r.TimeTakenSeconds);
-
-        Console.WriteLine("==============================");
-        Console.WriteLine("=== Total Runtime Comparison ===");
-        Console.WriteLine($"Total CPU Time: {totalCpuTime:F2} seconds");
-
-        if (GpuResults.Count > 0)
-        {
-            DisplayGpuComparison(totalCpuTime, totalGpuTime);
-        }
-        else
-        {
-            Console.WriteLine("Total GPU Time: N/A (CUDA not available)");
-            Console.WriteLine("Performance comparison not available - enable CUDA for GPU testing");
-        }
-    }
-
-    /// <summary>
-    /// Displays GPU performance comparison metrics.
-    /// </summary>
-    private static void DisplayGpuComparison(double totalCpuTime, double totalGpuTime)
-    {
-        var totalDiff = totalCpuTime - totalGpuTime;
-        var overallFaster = totalDiff > 0 ? "GPU" : "CPU";
-
-        Console.WriteLine($"Total GPU Time: {totalGpuTime:F2} seconds");
-        Console.WriteLine($"Total Difference: {Math.Abs(totalDiff):F2} seconds");
-        Console.WriteLine($"Overall Winner: {overallFaster} was faster by {Math.Abs(totalDiff):F2} seconds");
-
-        if (CpuResults.Count > 0 && GpuResults.Count > 0)
-        {
-            var percentageDiff = (Math.Abs(totalDiff) / Math.Max(totalCpuTime, totalGpuTime)) * 100;
-            Console.WriteLine($"Performance Improvement: {percentageDiff:F1}%");
-        }
-    }
-
-    /// <summary>
-    /// Displays test execution summary with performance metrics.
-    /// </summary>
-    private static void DisplayTestExecutionSummary()
-    {
-        Console.WriteLine("==============================");
-        Console.WriteLine("--- Test Execution Summary ---");
-        Console.WriteLine($"CPU Tests Completed: {CpuResults.Count}/{SamplePrompts!.Length}");
-        Console.WriteLine($"GPU Tests Completed: {GpuResults.Count}/{SamplePrompts!.Length}");
-
-        if (CpuResults.Count > 0)
-        {
-            var avgCpuTime = CpuResults.Average(r => r.TimeTakenSeconds);
-            Console.WriteLine($"Average CPU Time per Image: {avgCpuTime:F2} seconds");
-        }
-
-        if (GpuResults.Count > 0)
-        {
-            var avgGpuTime = GpuResults.Average(r => r.TimeTakenSeconds);
-            Console.WriteLine($"Average GPU Time per Image: {avgGpuTime:F2} seconds");
-
-            if (CpuResults.Count > 0)
-            {
-                var avgCpuTime = CpuResults.Average(r => r.TimeTakenSeconds);
-                var speedup = avgCpuTime / avgGpuTime;
-                Console.WriteLine($"GPU Speedup Factor: {speedup:F2}x");
-            }
-        }
-        Console.WriteLine("==============================");
-    }
 }
