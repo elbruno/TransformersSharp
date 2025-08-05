@@ -1,8 +1,14 @@
-﻿using Microsoft.Extensions.AI;
-using TransformersSharp;
-using TransformersSharp.MEAI;
+﻿using TransformersSharp;
+using TransformersSharp.Pipelines;
 
-var model = "Qwen/Qwen2.5-0.5B";
-var client = TextGenerationPipelineChatClient.FromModel(model, TorchDtype.BFloat16, trustRemoteCode: true);
-var response = await client.GetResponseAsync("tell me a story about kittens");
-Console.WriteLine(response.Text);
+var model = "openai/gpt-oss-20b";
+var pipeline = TextGenerationPipeline.FromModel(model, device: "cpu");
+Console.WriteLine("✅ Pipeline created successfully");
+
+var prompt = "Why the sky is blue?";
+var results = pipeline.Generate(prompt);
+
+foreach (var result in results)
+{
+    Console.WriteLine(result);
+}
